@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
-from flask_cors import cross_origin
-
+# from flask_cors import cross_origin
+from flask_cors import CORS
 from pymongo import MongoClient
 from bson import ObjectId
 import jwt
@@ -15,12 +15,18 @@ load_dotenv()
 
 app = Flask(__name__)
 
-@app.after_request
-def after_request(response):
-    response.headers.add("Access-Control-Allow-Origin", "*")
-    response.headers.add("Access-Control-Allow-Headers", "Content-Type,Authorization")
-    response.headers.add("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS")
-    return response
+CORS(app, supports_credentials=True, resources={r"/*": {
+    "origins": ["http://localhost:5173"],
+    "allow_headers": ["Content-Type", "Authorization"],
+    "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+}})
+
+# @app.after_request
+# def after_request(response):
+#     response.headers.add("Access-Control-Allow-Origin", "*")
+#     response.headers.add("Access-Control-Allow-Headers", "Content-Type,Authorization")
+#     response.headers.add("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS")
+#     return response
 
 # Config
 MONGO_URI = os.getenv("MONGO_URI")
@@ -49,7 +55,23 @@ def verify_jwt(token):
     except jwt.InvalidTokenError:
         return None
 
-# Register
+
+# --- ADD THIS FUNCTION RIGHT HERE ---
+def get_active_subcollection():
+    existing_batches = [name for name in db.list_collection_names() if name.startswith("users.users_batch_")]
+    if not existing_batches:
+        return "users.users_batch_1"
+
+    latest_batch_name = sorted(existing_batches, key=lambda x: int(x.split("_")[-1]))[-1]
+    latest_batch = db[latest_batch_name]
+
+    if latest_batch.count_documents({}) >= 30:
+        new_batch_number = int(latest_batch_name.split("_")[-1]) + 1
+        return f"users.users_batch_{new_batch_number}"
+    else:
+        return latest_batch_name
+
+# Register with subcollections (batches inside "users")
 @app.route("/api/register", methods=["POST"])
 def register():
     data = request.json
@@ -57,7 +79,7 @@ def register():
     email = data.get("email").lower()
     password = data.get("password")
 
-    # demographics
+    # ✅ FULL demographics dictionary (no "..." placeholder)
     demographics = {
         "religion": data.get("religion"),
         "gender": data.get("gender"),
@@ -76,7 +98,7 @@ def register():
         "considered_inclusive_entrepreneur": data.get("considered_inclusive_entrepreneur"),
     }
 
-    # behavior data (force dict)
+    # ✅ Parse behavior_data safely
     behavior_data = data.get("behavior_data", {})
     if isinstance(behavior_data, str):
         import json
@@ -85,30 +107,120 @@ def register():
         except:
             behavior_data = {}
 
-    if users_collection.find_one({"email": email}):
-        return jsonify({"error": "Email already registered"}), 400
+    # ✅ Check if main users document exists
+    users_doc = users_collection.find_one({"_id": "users"})
+    if not users_doc:
+        users_doc = {"_id": "users", "batches": []}
 
-    user_id = users_collection.insert_one({
-        "name": name,
-        "email": email,
-        "password": password,
-        "created_at": datetime.datetime.utcnow(),
-        "demographics": demographics,
-        "behavior_data": behavior_data
-    }).inserted_id
+    # ✅ Prevent duplicate emails (check all existing batches)
+    for batch in users_doc["batches"]:
+        for user in batch["users"]:
+            if user["email"] == email:
+                return jsonify({"error": "Email already registered"}), 400
 
-    token = create_jwt(user_id)
+    # ✅ Get or create the latest batch
+    if not users_doc["batches"]:
+        batch_name = "users_batch_1"
+        users_doc["batches"].append({"batch_name": batch_name, "users": []})
+    else:
+        last_batch = users_doc["batches"][-1]
+        if len(last_batch["users"]) >= 30:
+            batch_name = f"users_batch_{len(users_doc['batches']) + 1}"
+            users_doc["batches"].append({"batch_name": batch_name, "users": []})
+        else:
+            batch_name = last_batch["batch_name"]
+
+    # ✅ Add new user to the correct batch
+    for batch in users_doc["batches"]:
+        if batch["batch_name"] == batch_name:
+            batch["users"].append({
+                "name": name,
+                "email": email,
+                "password": password,
+                "created_at": datetime.datetime.utcnow(),
+                "demographics": demographics,
+                "behavior_data": behavior_data
+            })
+
+    # ✅ Save document back to MongoDB
+    users_collection.replace_one({"_id": "users"}, users_doc, upsert=True)
+
+    # ✅ Create JWT
+    token = create_jwt(str(email))  # You can replace with user_id if needed
 
     return jsonify({
         "token": token,
+        "batch": batch_name,
         "user": {
-            "id": str(user_id),
             "name": name,
             "email": email,
             "demographics": demographics,
             "behavior_data": behavior_data
         }
     })
+
+
+
+# # Register
+# @app.route("/api/register", methods=["POST"])
+# def register():
+#     data = request.json
+#     name = data.get("name")
+#     email = data.get("email").lower()
+#     password = data.get("password")
+
+#     # demographics
+#     demographics = {
+#         "religion": data.get("religion"),
+#         "gender": data.get("gender"),
+#         "age": data.get("age"),
+#         "place_of_residence": data.get("place_of_residence"),
+#         "father_occupation": data.get("father_occupation"),
+#         "mother_occupation": data.get("mother_occupation"),
+#         "household_monthly_income": data.get("household_monthly_income"),
+#         "education_level": data.get("education_level"),
+#         "field_of_study": data.get("field_of_study"),
+#         "university_college_name": data.get("university_college_name"),
+#         "attended_government_program": data.get("attended_government_program"),
+#         "has_entrepreneur_family_or_friends": data.get("has_entrepreneur_family_or_friends"),
+#         "currently_entrepreneur": data.get("currently_entrepreneur"),
+#         "prior_entrepreneurship_experience": data.get("prior_entrepreneurship_experience"),
+#         "considered_inclusive_entrepreneur": data.get("considered_inclusive_entrepreneur"),
+#     }
+
+#     # behavior data (force dict)
+#     behavior_data = data.get("behavior_data", {})
+#     if isinstance(behavior_data, str):
+#         import json
+#         try:
+#             behavior_data = json.loads(behavior_data)
+#         except:
+#             behavior_data = {}
+
+#     if users_collection.find_one({"email": email}):
+#         return jsonify({"error": "Email already registered"}), 400
+
+#     user_id = users_collection.insert_one({
+#         "name": name,
+#         "email": email,
+#         "password": password,
+#         "created_at": datetime.datetime.utcnow(),
+#         "demographics": demographics,
+#         "behavior_data": behavior_data
+#     }).inserted_id
+
+#     token = create_jwt(user_id)
+
+#     return jsonify({
+#         "token": token,
+#         "user": {
+#             "id": str(user_id),
+#             "name": name,
+#             "email": email,
+#             "demographics": demographics,
+#             "behavior_data": behavior_data
+#         }
+#     })
 
 
 # Login
@@ -321,7 +433,7 @@ def x_login():
     token = create_jwt(user_id)
     return jsonify({"token": token, "user": {"id": str(user_id), "name": name, "email": x_email}})
 
-# Profile (Protected Route)
+
 @app.route("/api/profile", methods=["GET"])
 def profile():
     auth_header = request.headers.get("Authorization")
@@ -337,14 +449,25 @@ def profile():
     if not decoded:
         return jsonify({"error": "Invalid or expired token"}), 401
 
-    user = users_collection.find_one({"_id": ObjectId(decoded["user_id"])})
-    if not user:
-        return jsonify({"error": "User not found"}), 404
+    user_id = decoded["user_id"]
 
-    # Remove sensitive data like password before sending response
+    # Try to find in users
+    user = users_collection.find_one({"_id": ObjectId(user_id)})
+    if not user:
+        # Try to find in admins
+        user = admins_collection.find_one({"_id": ObjectId(user_id)})
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+
+    # Remove sensitive data
     user.pop("password", None)
 
-    return jsonify({"user": {**user, "id": str(user["_id"])}})
+    return jsonify({
+        "user": {
+            "id": str(user["_id"]),
+            **{k: v for k, v in user.items() if k != "_id"}
+        }
+    })
 
 # Update Profile
 @app.route("/api/update-profile", methods=["POST"])
