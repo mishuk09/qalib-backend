@@ -6,7 +6,9 @@ from functools import wraps
 import jwt
 import os
 from dotenv import load_dotenv
-
+import pandas as pd
+from flask import send_file
+import io
 # -----------------------------------------
 # 🔧 CONFIG
 # -----------------------------------------
@@ -478,6 +480,70 @@ def admin_delete_user():
     users_collection.replace_one({"_id": "users"}, users_doc, upsert=True)
 
     return jsonify({"message": f"User {user_email} deleted successfully"}), 200
+
+
+# -----------------------------------------
+# 📊 EXPORT ALL USERS TO EXCEL (Admin)
+# -----------------------------------------
+
+@app.route("/api/admin/export-users", methods=["GET"])
+def export_users():
+    users_doc = users_collection.find_one({"_id": "users"})
+    if not users_doc or not users_doc.get("batches"):
+        return jsonify({"error": "No users found"}), 404
+
+    # Flatten users data
+    all_users = []
+    for batch in users_doc["batches"]:
+        for user in batch["users"]:
+            flat_user = {
+                "fullName": user.get("fullName"),
+                "email": user.get("email"),
+            }
+
+            # Cohort information
+            cohort = user.get("cohortinformation", {})
+            flat_user["programName"] = cohort.get("programName")
+            flat_user["programDates"] = cohort.get("programDates")
+            flat_user["programVenue"] = cohort.get("programVenue")
+
+            # Demographics
+            demo = user.get("demographics", {})
+            for key, value in demo.items():
+                flat_user[f"demographics_{key}"] = value
+
+            # Survey
+            survey = user.get("survey", {})
+            for key, value in survey.items():
+                flat_user[f"survey_{key}"] = value
+
+            # Dreamteam
+            dreamteam = user.get("dreamteam", {})
+            for key, value in dreamteam.items():
+                flat_user[f"dreamteam_{key}"] = value
+
+            # BigFive
+            bigfive = user.get("bigfive", {})
+            for key, value in bigfive.items():
+                flat_user[f"bigfive_{key}"] = value
+
+            all_users.append(flat_user)
+
+    # Convert to DataFrame
+    df = pd.DataFrame(all_users)
+
+    # Save to Excel in memory
+    output = io.BytesIO()
+    df.to_excel(output, index=False, engine="openpyxl")
+    output.seek(0)
+
+    # Send as file
+    return send_file(
+        output,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        as_attachment=True,
+        download_name="all_users.xlsx"
+    )
 
 
 
