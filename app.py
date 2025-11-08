@@ -1,34 +1,28 @@
 from flask import Flask, request, jsonify
-# from flask_cors import cross_origin
 from flask_cors import CORS
 from pymongo import MongoClient
-from bson import ObjectId
+import datetime, json
+from functools import wraps
 import jwt
-import datetime
 import os
 from dotenv import load_dotenv
-from bson import ObjectId
 
-
-# Load env vars
+# -----------------------------------------
+# 🔧 CONFIG
+# -----------------------------------------
 load_dotenv()
-
 app = Flask(__name__)
+# ✅ Use this exact configuration
+# CORS(app, 
+#      origins=["http://localhost:5173"], 
+#      supports_credentials=True,
+#      allow_headers=["Content-Type", "Authorization"],
+#      methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
+CORS(app)
 
-CORS(app, supports_credentials=True, resources={r"/*": {
-    "origins": ["http://localhost:5173"],
-    "allow_headers": ["Content-Type", "Authorization"],
-    "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
-}})
+app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "your_secret_key")
 
-# @app.after_request
-# def after_request(response):
-#     response.headers.add("Access-Control-Allow-Origin", "*")
-#     response.headers.add("Access-Control-Allow-Headers", "Content-Type,Authorization")
-#     response.headers.add("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS")
-#     return response
-
-# Config
+# MongoDB connection
 MONGO_URI = os.getenv("MONGO_URI")
 JWT_SECRET = os.getenv("JWT_SECRET")
 client = MongoClient(MONGO_URI)
@@ -37,88 +31,71 @@ users_collection = db["users"]
 admins_collection = db["admins"]
 
 
-# Helper: Create JWT
-def create_jwt(user_id):
-    payload = {
-        "user_id": str(user_id),
-        "exp": datetime.datetime.utcnow() + datetime.timedelta(days=7)
-    }
-    return jwt.encode(payload, JWT_SECRET, algorithm="HS256")
-
-# Helper: Verify JWT
-def verify_jwt(token):
-    try:
-        decoded = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
-        return decoded
-    except jwt.ExpiredSignatureError:
-        return None
-    except jwt.InvalidTokenError:
-        return None
 
 
-# --- ADD THIS FUNCTION RIGHT HERE ---
-def get_active_subcollection():
-    existing_batches = [name for name in db.list_collection_names() if name.startswith("users.users_batch_")]
-    if not existing_batches:
-        return "users.users_batch_1"
 
-    latest_batch_name = sorted(existing_batches, key=lambda x: int(x.split("_")[-1]))[-1]
-    latest_batch = db[latest_batch_name]
+# -----------------------------------------
+# 🔐 JWT Helper Functions
+# -----------------------------------------
+def create_jwt(email):
+    """Generate JWT token with email"""
+    token = jwt.encode(
+        {"email": email, "exp": datetime.datetime.utcnow() + datetime.timedelta(days=1)},
+        app.config["SECRET_KEY"],
+        algorithm="HS256"
+    )
+    return token
 
-    if latest_batch.count_documents({}) >= 30:
-        new_batch_number = int(latest_batch_name.split("_")[-1]) + 1
-        return f"users.users_batch_{new_batch_number}"
-    else:
-        return latest_batch_name
 
-# Register with subcollections (batches inside "users")
+def token_required(f):
+    """Middleware to protect routes using JWT token"""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = None
+        if "Authorization" in request.headers:
+            token = request.headers["Authorization"].split(" ")[1]
+        if not token:
+            return jsonify({"error": "Token missing"}), 401
+
+        try:
+            data = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+            current_user_email = data["email"]
+        except Exception as e:
+            return jsonify({"error": "Token invalid or expired"}), 401
+
+        return f(current_user_email, *args, **kwargs)
+    return decorated
+
+# -----------------------------------------
+# 🧩 REGISTER ENDPOINT
+# -----------------------------------------
 @app.route("/api/register", methods=["POST"])
 def register():
     data = request.json
-    name = data.get("name")
+    fullName = data.get("fullName")
     email = data.get("email").lower()
     password = data.get("password")
+    confirmPassword = data.get("confirmPassword")
 
-    # ✅ FULL demographics dictionary (no "..." placeholder)
-    demographics = {
-        "religion": data.get("religion"),
-        "gender": data.get("gender"),
-        "age": data.get("age"),
-        "place_of_residence": data.get("place_of_residence"),
-        "father_occupation": data.get("father_occupation"),
-        "mother_occupation": data.get("mother_occupation"),
-        "household_monthly_income": data.get("household_monthly_income"),
-        "education_level": data.get("education_level"),
-        "field_of_study": data.get("field_of_study"),
-        "university_college_name": data.get("university_college_name"),
-        "attended_government_program": data.get("attended_government_program"),
-        "has_entrepreneur_family_or_friends": data.get("has_entrepreneur_family_or_friends"),
-        "currently_entrepreneur": data.get("currently_entrepreneur"),
-        "prior_entrepreneurship_experience": data.get("prior_entrepreneurship_experience"),
-        "considered_inclusive_entrepreneur": data.get("considered_inclusive_entrepreneur"),
-    }
 
-    # ✅ Parse behavior_data safely
-    behavior_data = data.get("behavior_data", {})
-    if isinstance(behavior_data, str):
-        import json
-        try:
-            behavior_data = json.loads(behavior_data)
-        except:
-            behavior_data = {}
+    # ✅ Dynamic hybrid sections
+    cohortinformation = data.get("cohortinformation", {})
+    demographics = data.get("demographics", {})
 
-    # ✅ Check if main users document exists
+    
+
+    # ✅ Get users document
     users_doc = users_collection.find_one({"_id": "users"})
     if not users_doc:
         users_doc = {"_id": "users", "batches": []}
 
-    # ✅ Prevent duplicate emails (check all existing batches)
+    # ✅ Check duplicate email
     for batch in users_doc["batches"]:
         for user in batch["users"]:
             if user["email"] == email:
                 return jsonify({"error": "Email already registered"}), 400
 
-    # ✅ Get or create the latest batch
+    # ✅ Determine which batch to use (every 30 users)
     if not users_doc["batches"]:
         batch_name = "users_batch_1"
         users_doc["batches"].append({"batch_name": batch_name, "users": []})
@@ -130,139 +107,179 @@ def register():
         else:
             batch_name = last_batch["batch_name"]
 
-    # ✅ Add new user to the correct batch
+    # ✅ Add new user to selected batch
+    new_user = {
+        "fullName": fullName,
+        "email": email,
+        "password": password,
+        "confirmPassword": confirmPassword,
+        "created_at": datetime.datetime.utcnow(),
+        "cohortinformation": cohortinformation,
+        "demographics": demographics,
+        "survey": {},
+        "dreamteam": {},
+        "bigfive": {}
+    }
+
     for batch in users_doc["batches"]:
         if batch["batch_name"] == batch_name:
-            batch["users"].append({
-                "name": name,
-                "email": email,
-                "password": password,
-                "created_at": datetime.datetime.utcnow(),
-                "demographics": demographics,
-                "behavior_data": behavior_data
-            })
+            batch["users"].append(new_user)
 
-    # ✅ Save document back to MongoDB
+    # ✅ Save back to MongoDB
     users_collection.replace_one({"_id": "users"}, users_doc, upsert=True)
 
-    # ✅ Create JWT
-    token = create_jwt(str(email))  # You can replace with user_id if needed
-
+    token = create_jwt(email)
     return jsonify({
         "token": token,
         "batch": batch_name,
-        "user": {
-            "name": name,
-            "email": email,
-            "demographics": demographics,
-            "behavior_data": behavior_data
-        }
-    })
+        "user": new_user
+    }), 201
 
-
-
-# # Register
-# @app.route("/api/register", methods=["POST"])
-# def register():
-#     data = request.json
-#     name = data.get("name")
-#     email = data.get("email").lower()
-#     password = data.get("password")
-
-#     # demographics
-#     demographics = {
-#         "religion": data.get("religion"),
-#         "gender": data.get("gender"),
-#         "age": data.get("age"),
-#         "place_of_residence": data.get("place_of_residence"),
-#         "father_occupation": data.get("father_occupation"),
-#         "mother_occupation": data.get("mother_occupation"),
-#         "household_monthly_income": data.get("household_monthly_income"),
-#         "education_level": data.get("education_level"),
-#         "field_of_study": data.get("field_of_study"),
-#         "university_college_name": data.get("university_college_name"),
-#         "attended_government_program": data.get("attended_government_program"),
-#         "has_entrepreneur_family_or_friends": data.get("has_entrepreneur_family_or_friends"),
-#         "currently_entrepreneur": data.get("currently_entrepreneur"),
-#         "prior_entrepreneurship_experience": data.get("prior_entrepreneurship_experience"),
-#         "considered_inclusive_entrepreneur": data.get("considered_inclusive_entrepreneur"),
-#     }
-
-#     # behavior data (force dict)
-#     behavior_data = data.get("behavior_data", {})
-#     if isinstance(behavior_data, str):
-#         import json
-#         try:
-#             behavior_data = json.loads(behavior_data)
-#         except:
-#             behavior_data = {}
-
-#     if users_collection.find_one({"email": email}):
-#         return jsonify({"error": "Email already registered"}), 400
-
-#     user_id = users_collection.insert_one({
-#         "name": name,
-#         "email": email,
-#         "password": password,
-#         "created_at": datetime.datetime.utcnow(),
-#         "demographics": demographics,
-#         "behavior_data": behavior_data
-#     }).inserted_id
-
-#     token = create_jwt(user_id)
-
-#     return jsonify({
-#         "token": token,
-#         "user": {
-#             "id": str(user_id),
-#             "name": name,
-#             "email": email,
-#             "demographics": demographics,
-#             "behavior_data": behavior_data
-#         }
-#     })
-
-
-# Login
-@app.route("/api/login", methods=["POST"])
-def login():
+# -----------------------------------------
+# 🧠 UPDATE PROFILE ENDPOINT (Stepwise updates)
+# -----------------------------------------
+@app.route("/api/update-profile", methods=["POST"])
+@token_required
+def update_profile(current_user_email):
+    """Update parts of the user (survey, dreamteam, bigfive, etc.)"""
     data = request.json
-    email = data.get("email").lower()
-    password = data.get("password")
 
-    user = users_collection.find_one({"email": email})
-    if not user or user["password"] != password:   # plain text comparison
-        return jsonify({"error": "Invalid credentials"}), 401
+    # Identify which section to update (dynamic hybrid)
+    update_data = {}
+    allowed_sections = ["survey", "dreamteam", "bigfive", "cohortinformation", "demographics"]
 
-    token = create_jwt(user["_id"])
+    for section in allowed_sections:
+        if section in data:
+            update_data[f"batches.$[batch].users.$[user].{section}"] = data[section]
+
+    if not update_data:
+        return jsonify({"error": "No valid section to update"}), 400
+
+    # ✅ Perform the update in nested structure
+    result = users_collection.update_one(
+        {"_id": "users"},
+        {"$set": update_data},
+        array_filters=[
+            {"batch.users": {"$exists": True}},
+            {"user.email": current_user_email}
+        ]
+    )
+
+    if result.modified_count == 0:
+        return jsonify({"error": "User not found"}), 404
+
+    return jsonify({"message": "Profile updated successfully"}), 200
+
+# -----------------------------------------
+# 🔑 SIGNIN ENDPOINT
+# -----------------------------------------
+@app.route("/api/signin", methods=["POST"])
+def signin():
+    """User login using email and password"""
+    data = request.get_json()
+    email = data.get("email", "").lower()
+    password = data.get("password", "")
+
+    if not email or not password:
+        return jsonify({"error": "Email and password are required"}), 400
+
+    # ✅ Find the user in any batch
+    users_doc = users_collection.find_one({"_id": "users"})
+    if not users_doc or "batches" not in users_doc:
+        return jsonify({"error": "No users found"}), 404
+
+    found_user = None
+    for batch in users_doc["batches"]:
+        for user in batch["users"]:
+            if user["email"] == email and user["password"] == password:
+                found_user = user
+                break
+        if found_user:
+            break
+
+    if not found_user:
+        return jsonify({"error": "Invalid email or password"}), 401
+
+    # ✅ Generate JWT Token
+    token = create_jwt(email)
+
     return jsonify({
+        "message": "Signin successful",
         "token": token,
         "user": {
-            "id": str(user["_id"]),
-            "name": user["name"],
-            "email": user["email"]
+            "fullName": found_user.get("fullName"),
+            "email": found_user.get("email"),
+            "created_at": found_user.get("created_at")
         }
-    })
+    }), 200
 
 
-#fetch all users (for testing)
+# -----------------------------------------
+# 👤 USER PROFILE ENDPOINT
+# -----------------------------------------
+@app.route("/api/user-profile", methods=["GET"])
+@token_required
+def user_profile(current_user_email):
+    """
+    Fetch the user profile based on the JWT token.
+    """
+    # Get the users document
+    users_doc = users_collection.find_one({"_id": "users"})
+    if not users_doc:
+        return jsonify({"error": "No users found"}), 404
+
+    # Find the user in batches
+    for batch in users_doc["batches"]:
+        for user in batch["users"]:
+            if user["email"] == current_user_email:
+                # Return user data except password for security
+                user_data = user.copy()
+                user_data.pop("password", None)
+                user_data.pop("confirmPassword", None)
+                return jsonify({"user": user_data, "batch": batch["batch_name"]}), 200
+
+    return jsonify({"error": "User not found"}), 404
+
+
+# -----------------------------------------
+# ADMIN
+# -----------------------------------------
+
+
+
+# #fetch all users (for testing)
+# @app.route("/api/users", methods=["GET"])
+# def get_all_users():
+#     try:
+#         users = list(users_collection.find({}))  # fetch all users
+
+#         # Remove sensitive fields like password
+#         for user in users:
+#             user["id"] = str(user["_id"])
+#             del user["_id"]
+#             if "password" in user:
+#                 del user["password"]
+
+#         return jsonify({"users": users}), 200
+
+#     except Exception as e:
+#         return jsonify({"error": f"Failed to fetch users: {str(e)}"}), 500
+
+
+# -----------------------------------------
+# 👥 FETCH ALL USERS
+# -----------------------------------------
 @app.route("/api/users", methods=["GET"])
 def get_all_users():
-    try:
-        users = list(users_collection.find({}))  # fetch all users
+    users_doc = users_collection.find_one({"_id": "users"})
+    if not users_doc or not users_doc.get("batches"):
+        return jsonify({"users": []}), 200
 
-        # Remove sensitive fields like password
-        for user in users:
-            user["id"] = str(user["_id"])
-            del user["_id"]
-            if "password" in user:
-                del user["password"]
+    all_users = []
+    for batch in users_doc["batches"]:
+        all_users.extend(batch.get("users", []))
 
-        return jsonify({"users": users}), 200
-
-    except Exception as e:
-        return jsonify({"error": f"Failed to fetch users: {str(e)}"}), 500
-
+    return jsonify({"users": all_users}), 200
 
 
 
@@ -330,42 +347,80 @@ def admin_signup():
     except Exception as e:
         return jsonify({"success": False, "message": f"Error: {str(e)}"}), 500
 
-
-
-# Admin Sign-In
+# -----------------------------
+# 🔑 ADMIN SIGNIN
+# -----------------------------
 @app.route("/api/admin/signin", methods=["POST"])
 def admin_signin():
-    try:
-        data = request.json
-        email = data.get("email").lower()
-        password = data.get("password")
+    data = request.json
+    email = data.get("email", "").lower()
+    password = data.get("password", "")
 
-        if not email or not password:
-            return jsonify({"success": False, "message": "Email and password required"}), 400
+    admins_collection = db["admins"]
+    admin = admins_collection.find_one({"email": email, "password": password})
 
-        # Find admin
-        admin = admins_collection.find_one({"email": email})
-        if not admin or admin.get("password") != password:
-            return jsonify({"success": False, "message": "Invalid credentials"}), 401
+    if not admin:
+        return jsonify({"error": "Invalid email or password"}), 401
 
-        # Create JWT
-        token = create_jwt(admin["_id"])
+    # Create token for admin (optional: can use separate secret if needed)
+    token = create_jwt(email)
+    return jsonify({"token": token, "admin": {"email": admin["email"], "name": admin.get("name", "")}}), 200
 
-        return jsonify({
-            "success": True,
-            "message": "Login successful",
-            "token": token,
-            "admin": {
-                "id": str(admin["_id"]),
-                "firstName": admin.get("firstName"),
-                "lastName": admin.get("lastName"),
-                "email": admin.get("email"),
-                "role": admin.get("role", "admin")
-            }
-        }), 200
+#-----------------------------
+# 📋 FETCH ALL USERS FOR ADMIN
+# -----------------------------
 
-    except Exception as e:
-        return jsonify({"success": False, "message": f"Error: {str(e)}"}), 500
+@app.route("/api/admin/users", methods=["GET"])
+def admin_get_all_users():
+    users_doc = users_collection.find_one({"_id": "users"})
+    if not users_doc:
+        return jsonify({"users": []})
+
+    # Flatten all users from batches
+    all_users = []
+    for batch in users_doc.get("batches", []):
+        for user in batch.get("users", []):
+            user_copy = user.copy()
+            user_copy["batch_name"] = batch.get("batch_name")
+            all_users.append(user_copy)
+
+    return jsonify({"users": all_users}), 200
+
+
+# # Admin Sign-In
+# @app.route("/api/admin/signin", methods=["POST"])
+# def admin_signin():
+#     try:
+#         data = request.json
+#         email = data.get("email").lower()
+#         password = data.get("password")
+
+#         if not email or not password:
+#             return jsonify({"success": False, "message": "Email and password required"}), 400
+
+#         # Find admin
+#         admin = admins_collection.find_one({"email": email})
+#         if not admin or admin.get("password") != password:
+#             return jsonify({"success": False, "message": "Invalid credentials"}), 401
+
+#         # Create JWT
+#         token = create_jwt(admin["_id"])
+
+#         return jsonify({
+#             "success": True,
+#             "message": "Login successful",
+#             "token": token,
+#             "admin": {
+#                 "id": str(admin["_id"]),
+#                 "firstName": admin.get("firstName"),
+#                 "lastName": admin.get("lastName"),
+#                 "email": admin.get("email"),
+#                 "role": admin.get("role", "admin")
+#             }
+#         }), 200
+
+#     except Exception as e:
+#         return jsonify({"success": False, "message": f"Error: {str(e)}"}), 500
 
 
 
@@ -388,120 +443,46 @@ def get_all_admins():
     except Exception as e:
         return jsonify({"error": f"Failed to fetch admins: {str(e)}"}), 500
 
-
-
-
-# Google Login (placeholder)
-@app.route("/api/login/google", methods=["POST"])
-def google_login():
+# -----------------------------
+# 🗑️ ADMIN DELETE SPECIFIC USER
+# -----------------------------
+@app.route("/api/admin/delete-user", methods=["POST"])
+def admin_delete_user():
     data = request.json
-    google_email = data.get("email")
-    name = data.get("name")
+    user_email = data.get("email", "").lower()  # email of the user to delete
 
-    user = users_collection.find_one({"email": google_email})
-    if not user:
-        user_id = users_collection.insert_one({
-            "name": name,
-            "email": google_email,
-            "google_account": True,
-            "created_at": datetime.datetime.utcnow()
-        }).inserted_id
-    else:
-        user_id = user["_id"]
+    if not user_email:
+        return jsonify({"error": "User email is required"}), 400
 
-    token = create_jwt(user_id)
-    return jsonify({"token": token, "user": {"id": str(user_id), "name": name, "email": google_email}})
+    # Get users document
+    users_doc = users_collection.find_one({"_id": "users"})
+    if not users_doc or not users_doc.get("batches"):
+        return jsonify({"error": "No users found"}), 404
 
-# X Login (placeholder)
-@app.route("/api/login/x", methods=["POST"])
-def x_login():
-    data = request.json
-    x_email = data.get("email")
-    name = data.get("name")
+    user_deleted = False
 
-    user = users_collection.find_one({"email": x_email})
-    if not user:
-        user_id = users_collection.insert_one({
-            "name": name,
-            "email": x_email,
-            "x_account": True,
-            "created_at": datetime.datetime.utcnow()
-        }).inserted_id
-    else:
-        user_id = user["_id"]
+    # Iterate over batches to find and delete user
+    for batch in users_doc["batches"]:
+        for i, user in enumerate(batch["users"]):
+            if user["email"] == user_email:
+                batch["users"].pop(i)
+                user_deleted = True
+                break
+        if user_deleted:
+            break
 
-    token = create_jwt(user_id)
-    return jsonify({"token": token, "user": {"id": str(user_id), "name": name, "email": x_email}})
+    if not user_deleted:
+        return jsonify({"error": "User not found"}), 404
+
+    # Save updated users back to MongoDB
+    users_collection.replace_one({"_id": "users"}, users_doc, upsert=True)
+
+    return jsonify({"message": f"User {user_email} deleted successfully"}), 200
 
 
-@app.route("/api/profile", methods=["GET"])
-def profile():
-    auth_header = request.headers.get("Authorization")
-    if not auth_header:
-        return jsonify({"error": "No token"}), 401
 
-    parts = auth_header.split()
-    if len(parts) != 2 or parts[0].lower() != "bearer":
-        return jsonify({"error": "Invalid auth header format"}), 401
-
-    token = parts[1]
-    decoded = verify_jwt(token)
-    if not decoded:
-        return jsonify({"error": "Invalid or expired token"}), 401
-
-    user_id = decoded["user_id"]
-
-    # Try to find in users
-    user = users_collection.find_one({"_id": ObjectId(user_id)})
-    if not user:
-        # Try to find in admins
-        user = admins_collection.find_one({"_id": ObjectId(user_id)})
-        if not user:
-            return jsonify({"error": "User not found"}), 404
-
-    # Remove sensitive data
-    user.pop("password", None)
-
-    return jsonify({
-        "user": {
-            "id": str(user["_id"]),
-            **{k: v for k, v in user.items() if k != "_id"}
-        }
-    })
-
-# Update Profile
-@app.route("/api/update-profile", methods=["POST"])
-def update_profile():
-    try:
-        data = request.get_json()
-        email = data.get("email")
-
-        if not email:
-            return jsonify({"success": False, "message": "Email is required"}), 400
-
-        # Do not allow password updates here
-        update_data = {k: v for k, v in data.items() if k != "password" and v != ""}
-
-        result = users_collection.update_one(
-            {"email": email},
-            {"$set": update_data},
-            upsert=False
-        )
-
-        if result.matched_count == 0:
-            return jsonify({"success": False, "message": "User not found"}), 404
-
-        return jsonify({
-            "success": True,
-            "message": f"Profile updated successfully for {email}",
-            "updated_fields": update_data
-        }), 200
-
-    except Exception as e:
-        return jsonify({
-            "success": False,
-            "message": f"Error updating profile: {str(e)}"
-        }), 500
-
+# -----------------------------------------
+# 🚀 RUN SERVER
+# -----------------------------------------
 if __name__ == "__main__":
     app.run(debug=True)
