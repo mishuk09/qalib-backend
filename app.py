@@ -9,8 +9,6 @@ from dotenv import load_dotenv
 import pandas as pd
 from flask import send_file
 import io
-
-
 import numpy as np
 from pso import run_pso, load_dataset, compute_group_score
 
@@ -21,23 +19,53 @@ from pso import run_pso, load_dataset, compute_group_score
 # -----------------------------------------
 load_dotenv()
 app = Flask(__name__)
-# ✅ Use this exact configuration
-# CORS(app, 
-#      origins=["http://localhost:5173"], 
-#      supports_credentials=True,
-#      allow_headers=["Content-Type", "Authorization"],
-#      methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
-# CORS(app)
+ 
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "your_secret_key")
 
 # MongoDB connection
-MONGO_URI = os.getenv("MONGO_URI")
+
+
+# Initialize DB connection (Note: Always ensure MONGO_URI is set on Render!)
+# MONGO_URI = os.getenv("MONGO_URI")
 JWT_SECRET = os.getenv("JWT_SECRET")
-client = MongoClient(MONGO_URI)
-db = client["Cluster0"]
+# client = MongoClient(MONGO_URI)
+# db = client["Cluster0"]
+
+# if MONGO_URI:
+#     client = MongoClient(MONGO_URI)
+#     db = client.get_database('Cluster0')
+# else:
+#     print("WARNING: MONGO_URI not set. Database operations will fail.")
+#     db = None
+
+
+
+ 
+MONGO_URI = os.environ.get('MONGO_URI')
+
+# Initialize DB connection (DB name explicitly set to 'Cluster0')
+if MONGO_URI:
+    try:
+        # Attempt connection using the URI from environment variables
+        client = MongoClient(MONGO_URI)
+        # Setting the database name as 'Cluster0'
+        db = client.get_database('Cluster0')
+        print("MongoDB connection established to database 'Cluster0'.")
+    except Exception as e:
+        print(f"ERROR: Failed to connect to MongoDB: {e}")
+        db = None
+else:
+    print("WARNING: MONGO_URI environment variable is not set. Database operations will fail.")
+    db = None
+
+
+
+
+
+
 users_collection = db["users"]
 admins_collection = db["admins"]
 
@@ -50,6 +78,38 @@ OUTPUT_FOLDER = "outputs"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
+
+# -----------------------------------------
+# 🔐 JWT Helper Functions
+# -----------------------------------------
+def create_jwt(email):
+    """Generate JWT token with email"""
+    token = jwt.encode(
+        {"email": email, "exp": datetime.datetime.utcnow() + datetime.timedelta(days=1)},
+        app.config["SECRET_KEY"],
+        algorithm="HS256"
+    )
+    return token
+
+
+def token_required(f):
+    """Middleware to protect routes using JWT token"""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = None
+        if "Authorization" in request.headers:
+            token = request.headers["Authorization"].split(" ")[1]
+        if not token:
+            return jsonify({"error": "Token missing"}), 401
+
+        try:
+            data = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+            current_user_email = data["email"]
+        except Exception as e:
+            return jsonify({"error": "Token invalid or expired"}), 401
+
+        return f(current_user_email, *args, **kwargs)
+    return decorated
 
 
 # -----------------------------------------
@@ -120,38 +180,6 @@ def download_file(filename):
 
 
 
-
-# -----------------------------------------
-# 🔐 JWT Helper Functions
-# -----------------------------------------
-def create_jwt(email):
-    """Generate JWT token with email"""
-    token = jwt.encode(
-        {"email": email, "exp": datetime.datetime.utcnow() + datetime.timedelta(days=1)},
-        app.config["SECRET_KEY"],
-        algorithm="HS256"
-    )
-    return token
-
-
-def token_required(f):
-    """Middleware to protect routes using JWT token"""
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        token = None
-        if "Authorization" in request.headers:
-            token = request.headers["Authorization"].split(" ")[1]
-        if not token:
-            return jsonify({"error": "Token missing"}), 401
-
-        try:
-            data = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
-            current_user_email = data["email"]
-        except Exception as e:
-            return jsonify({"error": "Token invalid or expired"}), 401
-
-        return f(current_user_email, *args, **kwargs)
-    return decorated
 
 # -----------------------------------------
 # 🧩 REGISTER ENDPOINT
@@ -669,5 +697,12 @@ def export_users():
 # -----------------------------------------
 # 🚀 RUN SERVER
 # -----------------------------------------
-if __name__ == "__main__":
-    app.run(debug=True)
+
+# --- Production vs. Development Startup ---
+if __name__ == '__main__':
+    # This block is only for local development testing. 
+    # Render's Gunicorn command will ignore this block.
+    # We ensure it binds correctly if run locally, though 
+    # typically you don't run it this way in production.
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=True)
