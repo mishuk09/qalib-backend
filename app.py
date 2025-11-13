@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify,send_file,send_from_directory
 from flask_cors import CORS
 from pymongo import MongoClient
 import datetime, json
@@ -9,6 +9,13 @@ from dotenv import load_dotenv
 import pandas as pd
 from flask import send_file
 import io
+
+
+import numpy as np
+from pso import run_pso, load_dataset, compute_group_score
+
+
+
 # -----------------------------------------
 # 🔧 CONFIG
 # -----------------------------------------
@@ -20,7 +27,9 @@ app = Flask(__name__)
 #      supports_credentials=True,
 #      allow_headers=["Content-Type", "Authorization"],
 #      methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
-CORS(app)
+# CORS(app)
+CORS(app, resources={r"/*": {"origins": "*"}})
+
 
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "your_secret_key")
 
@@ -31,6 +40,82 @@ client = MongoClient(MONGO_URI)
 db = client["Cluster0"]
 users_collection = db["users"]
 admins_collection = db["admins"]
+
+
+
+
+
+UPLOAD_FOLDER = "uploads"
+OUTPUT_FOLDER = "outputs"
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(OUTPUT_FOLDER, exist_ok=True)
+
+
+
+# -----------------------------------------
+# PSO 
+# -----------------------------------------
+
+@app.route("/api/admin/pso-run", methods=["POST"])
+def run_pso_api():
+    try:
+        # ✅ Step 1: Receive uploaded file
+        if "file" not in request.files:
+            return jsonify({"error": "No file uploaded"}), 400
+
+        file = request.files["file"]
+        file_path = os.path.join(UPLOAD_FOLDER, "dataset.xlsx")
+        file.save(file_path)
+
+        # ✅ Step 2: Load and preprocess dataset
+        df = pd.read_excel(file_path)
+        num_rows = df.shape[0]
+        df_subset = df.iloc[:, 39:140]
+        D = df_subset.iloc[:, 0:25].sum(axis=1)
+        H = df_subset.iloc[:, 25:48].sum(axis=1)
+        T = df_subset.iloc[:, 48:63].sum(axis=1)
+        DT1 = df_subset.iloc[:, 77:82].sum(axis=1)
+        DT2 = df_subset.iloc[:, 83:88].sum(axis=1)
+        DT3 = df_subset.iloc[:, 89:94].sum(axis=1)
+        df_new = pd.DataFrame({'D': D, 'H': H, 'T': T, 'DT1': DT1, 'DT2': DT2, 'DT3': DT3})
+
+        dataset_path = os.path.join(UPLOAD_FOLDER, "dataset.xlsx")
+        df_new.to_excel(dataset_path, index=False)
+
+        # ✅ Step 3: Run PSO algorithm
+        pos, val, hist, groups = run_pso(max_iter=100, num_particles=30)
+
+        df_loaded = load_dataset()
+        fit = []
+        for members in groups.values():
+            fit.append(compute_group_score(df_loaded, members))
+        best_score = np.max(fit)
+        best_group_index = np.argmax(fit)
+
+        # ✅ Step 4: Save output Excel
+        data = zip(groups.items(), fit)
+        df_grp = pd.DataFrame(data, columns=["Group", "Score"])
+        output_path = os.path.join(OUTPUT_FOLDER, "group_final.xlsx")
+        df_grp.to_excel(output_path, index=False)
+
+        # ✅ Step 5: Return JSON summary
+        return jsonify({
+            "status": "success",
+            "best_group_index": int(best_group_index),
+            "best_group": groups[best_group_index],
+            "best_score": float(best_score),
+            "download_url": "/api/admin/download/group_final.xlsx"
+        })
+
+    except Exception as e:
+        print("Error:", e)
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/admin/download/<path:filename>")
+def download_file(filename):
+    """Serve the generated Excel file for download."""
+    return send_from_directory(OUTPUT_FOLDER, filename, as_attachment=True)
 
 
 
@@ -137,6 +222,7 @@ def register():
         "user": new_user
     }), 201
 
+
 # -----------------------------------------
 # 🧠 UPDATE PROFILE ENDPOINT (Stepwise updates)
 # -----------------------------------------
@@ -171,6 +257,7 @@ def update_profile(current_user_email):
         return jsonify({"error": "User not found"}), 404
 
     return jsonify({"message": "Profile updated successfully"}), 200
+
 
 # -----------------------------------------
 # 🔑 SIGNIN ENDPOINT
@@ -216,6 +303,7 @@ def signin():
     }), 200
 
 
+
 # -----------------------------------------
 # 👤 USER PROFILE ENDPOINT
 # -----------------------------------------
@@ -242,30 +330,39 @@ def user_profile(current_user_email):
 
     return jsonify({"error": "User not found"}), 404
 
+# -----------------------------------------
+# 👤 USER SURVEY ENDPOINT
+# -----------------------------------------
+@app.route("/api/user-survey", methods=["GET"])
+@token_required
+def user_survey(current_user_email):
+    """
+    Fetch the logged-in user's survey data (D1, D2..., H1, H2...) based on JWT token.
+    """
+    # Get the users document
+    users_doc = users_collection.find_one({"_id": "users"})
+    if not users_doc:
+        return jsonify({"error": "No users found"}), 404
+
+    # Find the user in batches
+    for batch in users_doc.get("batches", []):
+        for user in batch.get("users", []):
+            if user.get("email") == current_user_email:
+                survey_data = user.get("survey", {})  # only survey data
+                if not survey_data:
+                    return jsonify({"error": "Survey data not found"}), 404
+
+                return jsonify({
+                    "survey": survey_data,
+                    "batch": batch.get("batch_name")
+                }), 200
+
+    return jsonify({"error": "User not found"}), 404
+
 
 # -----------------------------------------
 # ADMIN
 # -----------------------------------------
-
-
-
-# #fetch all users (for testing)
-# @app.route("/api/users", methods=["GET"])
-# def get_all_users():
-#     try:
-#         users = list(users_collection.find({}))  # fetch all users
-
-#         # Remove sensitive fields like password
-#         for user in users:
-#             user["id"] = str(user["_id"])
-#             del user["_id"]
-#             if "password" in user:
-#                 del user["password"]
-
-#         return jsonify({"users": users}), 200
-
-#     except Exception as e:
-#         return jsonify({"error": f"Failed to fetch users: {str(e)}"}), 500
 
 
 # -----------------------------------------
@@ -389,44 +486,6 @@ def admin_get_all_users():
     return jsonify({"users": all_users}), 200
 
 
-# # Admin Sign-In
-# @app.route("/api/admin/signin", methods=["POST"])
-# def admin_signin():
-#     try:
-#         data = request.json
-#         email = data.get("email").lower()
-#         password = data.get("password")
-
-#         if not email or not password:
-#             return jsonify({"success": False, "message": "Email and password required"}), 400
-
-#         # Find admin
-#         admin = admins_collection.find_one({"email": email})
-#         if not admin or admin.get("password") != password:
-#             return jsonify({"success": False, "message": "Invalid credentials"}), 401
-
-#         # Create JWT
-#         token = create_jwt(admin["_id"])
-
-#         return jsonify({
-#             "success": True,
-#             "message": "Login successful",
-#             "token": token,
-#             "admin": {
-#                 "id": str(admin["_id"]),
-#                 "firstName": admin.get("firstName"),
-#                 "lastName": admin.get("lastName"),
-#                 "email": admin.get("email"),
-#                 "role": admin.get("role", "admin")
-#             }
-#         }), 200
-
-#     except Exception as e:
-#         return jsonify({"success": False, "message": f"Error: {str(e)}"}), 500
-
-
-
-
 #fetch all admins (for testing)
 @app.route("/api/admin", methods=["GET"])
 def get_all_admins():
@@ -482,48 +541,103 @@ def admin_delete_user():
     return jsonify({"message": f"User {user_email} deleted successfully"}), 200
 
 
-# -----------------------------------------
-# 📊 EXPORT ALL USERS TO EXCEL (Admin)
-# -----------------------------------------
 
+
+@app.route("/api/admin/users-by-program", methods=["GET"])
+def admin_users_by_program():
+    """
+    Return a list of all programs and users grouped by programName.
+    Response:
+      {
+        "programs": ["All", "Program A", "Program B", ...],
+        "usersByProgram": {
+           "All": [...],
+           "Program A": [...],
+           ...
+        }
+      }
+    """
+    users_doc = users_collection.find_one({"_id": "users"})
+    if not users_doc or not users_doc.get("batches"):
+        return jsonify({"programs": ["All"], "usersByProgram": {"All": []}}), 200
+
+    all_users = []
+    for batch in users_doc.get("batches", []):
+        for user in batch.get("users", []):
+            user_copy = user.copy()
+            user_copy["batch_name"] = batch.get("batch_name")
+            all_users.append(user_copy)
+
+    # Group by programName (found under cohortinformation.programName)
+    users_by_program = {}
+    users_by_program["All"] = all_users
+
+    for user in all_users:
+        cohort = user.get("cohortinformation", {}) or {}
+        program = cohort.get("programName") or "Unknown Program"
+        if program not in users_by_program:
+            users_by_program[program] = []
+        users_by_program[program].append(user)
+
+    # Build programs list in stable order: All first, then sorted program names
+    extra_programs = [p for p in users_by_program.keys() if p != "All"]
+    # keep ordering consistent (Unknown Program at end)
+    sorted_programs = sorted([p for p in extra_programs if p != "Unknown Program"]) 
+    if "Unknown Program" in extra_programs:
+        sorted_programs.append("Unknown Program")
+    programs_list = ["All"] + sorted_programs
+
+    return jsonify({"programs": programs_list, "usersByProgram": users_by_program}), 200
+
+
+# Update existing export endpoint to accept optional programName query param:
 @app.route("/api/admin/export-users", methods=["GET"])
 def export_users():
+    # optional programName query param
+    program_filter = request.args.get("programName")  # can be None or "All" or a specific program
+
     users_doc = users_collection.find_one({"_id": "users"})
     if not users_doc or not users_doc.get("batches"):
         return jsonify({"error": "No users found"}), 404
 
-    # Flatten users data
+    # Flatten users data and optionally filter by programName
     all_users = []
     for batch in users_doc["batches"]:
         for user in batch["users"]:
+            cohort = user.get("cohortinformation", {}) or {}
+            program_name = cohort.get("programName") or "Unknown Program"
+
+            # Apply filter if provided and not "All"
+            if program_filter and program_filter != "All" and program_filter != program_name:
+                continue
+
             flat_user = {
                 "fullName": user.get("fullName"),
                 "email": user.get("email"),
+                "programName": program_name,
             }
 
-            # Cohort information
-            cohort = user.get("cohortinformation", {})
-            flat_user["programName"] = cohort.get("programName")
+            # Cohort information (kept)
             flat_user["programDates"] = cohort.get("programDates")
             flat_user["programVenue"] = cohort.get("programVenue")
 
             # Demographics
-            demo = user.get("demographics", {})
+            demo = user.get("demographics", {}) or {}
             for key, value in demo.items():
                 flat_user[f"demographics_{key}"] = value
 
             # Survey
-            survey = user.get("survey", {})
+            survey = user.get("survey", {}) or {}
             for key, value in survey.items():
                 flat_user[f"survey_{key}"] = value
 
             # Dreamteam
-            dreamteam = user.get("dreamteam", {})
+            dreamteam = user.get("dreamteam", {}) or {}
             for key, value in dreamteam.items():
                 flat_user[f"dreamteam_{key}"] = value
 
             # BigFive
-            bigfive = user.get("bigfive", {})
+            bigfive = user.get("bigfive", {}) or {}
             for key, value in bigfive.items():
                 flat_user[f"bigfive_{key}"] = value
 
@@ -537,15 +651,20 @@ def export_users():
     df.to_excel(output, index=False, engine="openpyxl")
     output.seek(0)
 
-    # Send as file
+    # Build download_name to indicate program when filtered
+    download_name = "all_users.xlsx"
+    if program_filter and program_filter != "All":
+        # sanitize program_filter for filename (simple replacement)
+        safe_name = program_filter.replace(" ", "_").replace("/", "_")
+        download_name = f"users_{safe_name}.xlsx"
+
     return send_file(
         output,
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         as_attachment=True,
-        download_name="all_users.xlsx"
+        download_name=download_name
     )
-
-
+ 
 
 # -----------------------------------------
 # 🚀 RUN SERVER
