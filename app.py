@@ -20,7 +20,18 @@ from pso import run_pso, load_dataset, compute_group_score
 load_dotenv()
 app = Flask(__name__)
  
-CORS(app, resources={r"/*": {"origins": "*"}})
+# CORS(app, resources={r"/*": {"origins": "*"}})
+# The best practice for production and for supporting credentials
+CORS(app, supports_credentials=True, resources={
+    r"/*": {
+        "origins": [
+            "http://localhost:3000/",
+            "http://localhost:5173/",
+            "https://qalib.org/",
+            "https://orangered-fox-171828.hostingersite.com/"
+        ]
+    }
+})
 
 
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "your_secret_key")
