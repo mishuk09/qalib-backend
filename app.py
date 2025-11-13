@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify,send_file,send_from_directory
-from flask_cors import CORS
+from flask_cors import CORS, cross_origin
 from pymongo import MongoClient
 import datetime, json
 from functools import wraps
@@ -22,17 +22,26 @@ app = Flask(__name__)
  
 # CORS(app, resources={r"/*": {"origins": "*"}})
 # The best practice for production and for supporting credentials
-CORS(app, supports_credentials=True, resources={
-    r"/*": {
-        "origins": [
-            "http://localhost:3000",
-            "http://localhost:5173",
-            "https://qalib.org",
-            "https://orangered-fox-171828.hostingersite.com"
-        ]
-    }
-})
+# CORS(app, supports_credentials=True, resources={
+#     r"/*": {
+#         "origins": [
+#             "http://localhost:3000",
+#             "http://localhost:5173",
+#             "https://qalib.org",
+#             "https://orangered-fox-171828.hostingersite.com"
+#         ]
+#     }
+# })
 
+# ✅ Enable full CORS for all API routes
+CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
+
+
+# ✅ Handle preflight OPTIONS requests (important for axios + file upload)
+@app.before_request
+def handle_options():
+    if request.method == "OPTIONS":
+        return '', 200
 
 
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "your_secret_key")
@@ -127,11 +136,10 @@ def token_required(f):
 # -----------------------------------------
 # PSO 
 # -----------------------------------------
-
-@app.route("/api/admin/pso-run", methods=["POST"])
+@app.route("/api/admin/pso-run", methods=["POST", "OPTIONS"])
+@cross_origin()
 def run_pso_api():
     try:
-        # ✅ Step 1: Receive uploaded file
         if "file" not in request.files:
             return jsonify({"error": "No file uploaded"}), 400
 
@@ -139,38 +147,32 @@ def run_pso_api():
         file_path = os.path.join(UPLOAD_FOLDER, "dataset.xlsx")
         file.save(file_path)
 
-        # ✅ Step 2: Load and preprocess dataset
         df = pd.read_excel(file_path)
         num_rows = df.shape[0]
         df_subset = df.iloc[:, 39:140]
+
         D = df_subset.iloc[:, 0:25].sum(axis=1)
         H = df_subset.iloc[:, 25:48].sum(axis=1)
         T = df_subset.iloc[:, 48:63].sum(axis=1)
         DT1 = df_subset.iloc[:, 77:82].sum(axis=1)
         DT2 = df_subset.iloc[:, 83:88].sum(axis=1)
         DT3 = df_subset.iloc[:, 89:94].sum(axis=1)
-        df_new = pd.DataFrame({'D': D, 'H': H, 'T': T, 'DT1': DT1, 'DT2': DT2, 'DT3': DT3})
 
+        df_new = pd.DataFrame({'D': D, 'H': H, 'T': T, 'DT1': DT1, 'DT2': DT2, 'DT3': DT3})
         dataset_path = os.path.join(UPLOAD_FOLDER, "dataset.xlsx")
         df_new.to_excel(dataset_path, index=False)
 
-        # ✅ Step 3: Run PSO algorithm
         pos, val, hist, groups = run_pso(max_iter=100, num_particles=30)
-
         df_loaded = load_dataset()
-        fit = []
-        for members in groups.values():
-            fit.append(compute_group_score(df_loaded, members))
+        fit = [compute_group_score(df_loaded, members) for members in groups.values()]
         best_score = np.max(fit)
         best_group_index = np.argmax(fit)
 
-        # ✅ Step 4: Save output Excel
         data = zip(groups.items(), fit)
         df_grp = pd.DataFrame(data, columns=["Group", "Score"])
         output_path = os.path.join(OUTPUT_FOLDER, "group_final.xlsx")
         df_grp.to_excel(output_path, index=False)
 
-        # ✅ Step 5: Return JSON summary
         return jsonify({
             "status": "success",
             "best_group_index": int(best_group_index),
@@ -184,12 +186,16 @@ def run_pso_api():
         return jsonify({"error": str(e)}), 500
 
 
-@app.route("/api/admin/download/<path:filename>")
+# @app.route("/api/admin/download/<path:filename>")
+# def download_file(filename):
+#     """Serve the generated Excel file for download."""
+#     return send_from_directory(OUTPUT_FOLDER, filename, as_attachment=True)
+
+
+@app.route("/api/admin/download/<path:filename>", methods=["GET", "OPTIONS"])
+@cross_origin()
 def download_file(filename):
-    """Serve the generated Excel file for download."""
     return send_from_directory(OUTPUT_FOLDER, filename, as_attachment=True)
-
-
 
 
 
