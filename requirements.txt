@@ -1,0 +1,8 @@
+Flask
+flask-cors
+pymongo
+PyJWT
+python-dotenv
+pandas
+numpy
+gunicorn  # The necessary WSGI server for production
