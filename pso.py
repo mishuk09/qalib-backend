@@ -1,63 +1,62 @@
-"""
-pso.py — PSO-based group matching for Qalib project (Backend Safe Version)
-Removed GUI (PyQt5) & plotting for server use.
-"""
-
+# pso.py — Optimized PSO (same meaning/output)
 import os
 import math
 import numpy as np
 import pandas as pd
 
-# -------------------------
-# 1️⃣ Load Dataset
-# -------------------------
-def load_dataset():
+def load_dataset(path=None):
     """
-    Automatically detect dataset.xlsx in data/ or current folder.
-    Keep only numeric columns for PSO fitness calculation.
+    Load dataset.xlsx (once). Return numeric-only DataFrame with float32 dtype.
+    If path provided, read that file, otherwise search uploads/ or data/.
     """
-    possible_paths = [
-        os.path.join(os.getcwd(), "data", "dataset.xlsx"),
-        os.path.join(os.getcwd(), "uploads", "dataset.xlsx"),
-        os.path.join(os.getcwd(), "dataset.xlsx"),
-    ]
+    if path:
+        if not os.path.exists(path):
+            raise FileNotFoundError(f"{path} not found.")
+        df = pd.read_excel(path, header=0)
+    else:
+        possible_paths = [
+            os.path.join(os.getcwd(), "uploads", "dataset.xlsx"),
+            os.path.join(os.getcwd(), "data", "dataset.xlsx"),
+            os.path.join(os.getcwd(), "dataset.xlsx"),
+        ]
+        path_found = None
+        for p in possible_paths:
+            if os.path.exists(p):
+                path_found = p
+                break
+        if not path_found:
+            raise FileNotFoundError("dataset.xlsx not found in uploads/ or data/ or project root.")
+        df = pd.read_excel(path_found, header=0)
 
-    path = None
-    for p in possible_paths:
-        if os.path.exists(p):
-            path = p
-            break
-
-    if not path:
-        raise FileNotFoundError("dataset.xlsx not found. Place it in the uploads/ or project folder.")
-
-    # Try reading with flexible header detection
-    for header_row in range(0, 4):
-        df = pd.read_excel(path, header=header_row)
-        all_text_headers = all(isinstance(col, str) and col.strip() != "" for col in df.columns)
-        if all_text_headers:
-            break
-
-    # Keep only numeric columns for PSO
-    df_num = df.select_dtypes(include=[np.number])
+    # Keep numeric columns only and convert to float32 for speed
+    df_num = df.select_dtypes(include=[np.number]).astype(np.float32)
     if df_num.empty:
-        raise ValueError("No numeric columns found. Ensure your dataset has numeric survey responses.")
-    
+        raise ValueError("No numeric columns found. Ensure dataset has numeric survey responses.")
     return df_num
 
 
-# -------------------------
-# 2️⃣ Fitness Function
-# -------------------------
-def compute_group_score(df, members):
-    """Compute group score using mean of numeric columns."""
+def compute_group_score_from_values(arr_values, members):
+    """
+    arr_values: numpy array shape (n_profiles, n_features)
+    members: list/array of member indices
+    Returns single float score = mean of all numeric values for chosen members.
+    """
     if len(members) == 0:
         return 0.0
-    return float(df.iloc[members].mean().mean())
+    sub = arr_values[members]  # shape (k, n_features)
+    # single mean across all elements
+    return float(sub.mean())
 
 
-def decode_groups(particle, n_mem, n_profile):
-    """Convert particle vector into group assignments."""
+def decode_groups_from_particle(particle, n_mem, n_profile):
+    """
+    Reproduce original decode logic:
+    ranks = np.argsort(np.argsort(-particle))
+    n_grp = max(1, math.ceil(n_profile / n_mem))
+    grp_assignments = (ranks % n_grp).astype(int)
+    Return dict: {group_index: [member_indices, ...], ...}
+    """
+    # Keep same ranking behavior to preserve meaning
     ranks = np.argsort(np.argsort(-particle))
     n_grp = max(1, math.ceil(n_profile / n_mem))
     grp_assignments = (ranks % n_grp).astype(int)
@@ -68,11 +67,15 @@ def decode_groups(particle, n_mem, n_profile):
     return groups
 
 
-def fitness_function(particle, df, n_mem=3, scoring="min"):
-    """Evaluate fitness for one particle."""
-    n_profile = df.shape[0]
-    groups = decode_groups(particle, n_mem, n_profile)
-    group_scores = [compute_group_score(df, members) for members in groups.values()]
+def fitness_from_particle_and_values(particle, arr_values, n_mem=3, scoring="min"):
+    """
+    Compute fitness given particle and pre-loaded numpy array arr_values.
+    This avoids pandas and repeated conversions.
+    """
+    n_profile = arr_values.shape[0]
+    groups = decode_groups_from_particle(particle, n_mem, n_profile)
+    # compute group scores
+    group_scores = [compute_group_score_from_values(arr_values, members) for members in groups.values()]
 
     if scoring == "max":
         return max(group_scores)
@@ -83,67 +86,80 @@ def fitness_function(particle, df, n_mem=3, scoring="min"):
     elif scoring == "sum":
         return np.sum(group_scores)
     else:
-        raise ValueError("Unknown scoring method: choose 'max', 'mean', or 'sum'")
+        raise ValueError("Unknown scoring method: choose 'max', 'min', 'mean' or 'sum'")
 
 
-# -------------------------
-# 3️⃣ PSO Algorithm
-# -------------------------
 class Particle:
-    def __init__(self, dim, bounds, df, n_mem, scoring):
-        self.position = np.random.uniform(bounds[0], bounds[1], dim)
-        self.velocity = np.random.uniform(-1, 1, dim)
-        self.df = df
-        self.n_mem = n_mem
-        self.scoring = scoring
-
+    __slots__ = ("position", "velocity", "best_position", "best_value", "current_value")
+    def __init__(self, dim, bounds, arr_values, n_mem, scoring):
+        self.position = np.random.uniform(bounds[0], bounds[1], dim).astype(np.float32)
+        self.velocity = np.random.uniform(-1.0, 1.0, dim).astype(np.float32)
         self.best_position = self.position.copy()
-        self.best_value = fitness_function(self.position, df, n_mem, scoring)
+        # Evaluate once using fast numpy-based fitness
+        self.best_value = fitness_from_particle_and_values(self.position, arr_values, n_mem, scoring)
         self.current_value = self.best_value
 
     def update_velocity(self, global_best_position, w, c1, c2):
-        r1, r2 = np.random.random(self.position.shape), np.random.random(self.position.shape)
+        # use vectorized randoms
+        r1 = np.random.random(self.position.shape).astype(np.float32)
+        r2 = np.random.random(self.position.shape).astype(np.float32)
         self.velocity = (
             w * self.velocity
             + c1 * r1 * (self.best_position - self.position)
             + c2 * r2 * (global_best_position - self.position)
-        )
+        ).astype(np.float32)
 
-    def update_position(self, bounds):
-        self.position = np.clip(self.position + self.velocity, bounds[0], bounds[1])
-        self.current_value = fitness_function(self.position, self.df, self.n_mem, self.scoring)
+    def update_position(self, bounds, arr_values, n_mem, scoring):
+        self.position = np.clip(self.position + self.velocity, bounds[0], bounds[1]).astype(np.float32)
+        self.current_value = fitness_from_particle_and_values(self.position, arr_values, n_mem, scoring)
         if self.current_value > self.best_value:
             self.best_value = self.current_value
             self.best_position = self.position.copy()
 
 
-def run_pso(num_particles=20, max_iter=1000, n_mem=3, scoring="min", verbose=True):
-    """Main PSO function for optimization."""
-    df = load_dataset()
-    dim = df.shape[0]
-    print("No. of participants:", dim)
-    print("No. of group:", dim / n_mem)
-    bounds = (0, 1)
+def run_pso(df, num_particles=20, max_iter=1000, n_mem=3, scoring="min", verbose=False):
+    """
+    Main PSO function.
+    df: pandas DataFrame (numeric-only, dtype float32) already loaded by caller.
+    Returns: (best_position, best_value, history_list, best_groups_dict)
+    """
+    # Convert once to numpy values
+    arr_values = df.values  # shape (n_profiles, n_features)
+    n_profile = arr_values.shape[0]
+    if n_profile == 0:
+        raise ValueError("Dataset has 0 rows.")
 
-    particles = [Particle(dim, bounds, df, n_mem, scoring) for _ in range(num_particles)]
+    dim = n_profile
+    bounds = (0.0, 1.0)
+
+    # Initialize particles
+    particles = [Particle(dim, bounds, arr_values, n_mem, scoring) for _ in range(num_particles)]
+
+    # initialize global best
     global_best_position = particles[0].best_position.copy()
     global_best_value = particles[0].best_value
+    for p in particles:
+        if p.best_value > global_best_value:
+            global_best_value = p.best_value
+            global_best_position = p.best_position.copy()
 
     history = []
 
     for iteration in range(max_iter):
-        w = 1 - (iteration / max_iter)
+        # inertia weight schedule (linearly decreasing)
+        w = 1.0 - (iteration / max_iter)
         for p in particles:
             p.update_velocity(global_best_position, w, c1=2.0, c2=2.0)
-            p.update_position(bounds)
+            p.update_position(bounds, arr_values, n_mem, scoring)
 
+            # check for global improvement
             if p.best_value > global_best_value:
                 global_best_value = p.best_value
                 global_best_position = p.best_position.copy()
 
         history.append(global_best_value)
-        if verbose and iteration % 10 == 0:
+        if verbose and (iteration % 50 == 0 or iteration == max_iter - 1):
             print(f"Iter {iteration+1}/{max_iter} | Best value: {global_best_value:.6f}")
 
-    best_groups = decode_groups(global_best_position, n_mem, dim)
+    best_groups = decode_groups_from_particle(global_best_position, n_mem, dim)
     return global_best_position, global_best_value, history, best_groups
