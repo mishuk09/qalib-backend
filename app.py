@@ -140,6 +140,83 @@ def token_required(f):
 
 
 
+# @app.route("/api/admin/pso-run", methods=["POST", "OPTIONS"])
+# @cross_origin()
+# def run_pso_api():
+#     try:
+#         if "file" not in request.files:
+#             return jsonify({"error": "No file uploaded"}), 400
+
+#         file = request.files["file"]
+#         file_path = os.path.join(UPLOAD_FOLDER, "dataset.xlsx")
+#         file.save(file_path)
+
+#         # Read original excel and prepare the same reduced df_new you had before
+#         df = pd.read_excel(file_path)
+#         # Keep same slicing as original
+#         df_subset = df.iloc[:, 39:140]
+
+#         D = df_subset.iloc[:, 0:25].sum(axis=1)
+#         H = df_subset.iloc[:, 25:48].sum(axis=1)
+#         T = df_subset.iloc[:, 48:63].sum(axis=1)
+#         DT1 = df_subset.iloc[:, 77:82].sum(axis=1)
+#         DT2 = df_subset.iloc[:, 83:88].sum(axis=1)
+#         DT3 = df_subset.iloc[:, 89:94].sum(axis=1)
+
+#         df_new = pd.DataFrame({'D': D, 'H': H, 'T': T, 'DT1': DT1, 'DT2': DT2, 'DT3': DT3})
+
+#         # Save reduced dataset (like original flow)
+#         dataset_path = os.path.join(UPLOAD_FOLDER, "dataset.xlsx")
+#         df_new.to_excel(dataset_path, index=False)
+
+#         # Load dataset once via pso.load_dataset (this ensures numeric-only and float32 conversion)
+#         df_loaded = load_dataset(dataset_path)  # uses optimized loader
+
+#         # Run PSO with loaded df
+#         pos, val, hist, groups = run_pso(df_loaded, max_iter=100, num_particles=30, n_mem=3, scoring="min", verbose=False)
+
+#         # Compute per-group fit quickly using numpy
+#         arr_vals = df_loaded.values
+#         fit = [compute_group_score_from_values(arr_vals, members) for members in groups.values()]
+#         best_score = float(np.max(fit)) if len(fit) > 0 else float(val)
+#         best_group_index = int(np.argmax(fit)) if len(fit) > 0 else 0
+
+#         # Build output DataFrame similar to your original (Group, Score)
+#         # data = [(g, s) for g, s in zip(groups.keys(), fit)]
+#         # df_grp = pd.DataFrame(data, columns=["Group", "Score"])
+#         # df: original uploaded DataFrame with 'fullName' column
+
+#         # Build output DataFrame with names
+#         data = [
+#         (g, round(fit[i], 2), ", ".join(df.iloc[members]['fullName'].astype(str)))
+#         for i, (g, members) in enumerate(groups.items())
+#         ]
+#         df_grp = pd.DataFrame(data, columns=["Group", "Score", "Members"])
+
+
+
+
+#         # #Save in excel
+#         # output_path = os.path.join(OUTPUT_FOLDER, "group_final.xlsx")
+#         # df_grp.to_excel(output_path, index=False)
+
+#         # Save as TXT instead of XLSX
+#         output_path = os.path.join(OUTPUT_FOLDER, "group_final.txt")
+#         df_grp.to_csv(output_path, index=False, sep="\t")
+
+#         return jsonify({
+#             "status": "success",
+#             "best_group_index": int(best_group_index),
+#             "best_group": groups[best_group_index],
+#             "best_score": float(best_score),
+#             "download_url": "/api/admin/download/group_final.txt"
+
+#         })
+
+#     except Exception as e:
+#         print("Error:", e)
+#         return jsonify({"error": str(e)}), 500
+
 @app.route("/api/admin/pso-run", methods=["POST", "OPTIONS"])
 @cross_origin()
 def run_pso_api():
@@ -163,7 +240,9 @@ def run_pso_api():
         DT2 = df_subset.iloc[:, 83:88].sum(axis=1)
         DT3 = df_subset.iloc[:, 89:94].sum(axis=1)
 
-        df_new = pd.DataFrame({'D': D, 'H': H, 'T': T, 'DT1': DT1, 'DT2': DT2, 'DT3': DT3})
+        df_new = pd.DataFrame(
+            {"D": D, "H": H, "T": T, "DT1": DT1, "DT2": DT2, "DT3": DT3}
+        )
 
         # Save reduced dataset (like original flow)
         dataset_path = os.path.join(UPLOAD_FOLDER, "dataset.xlsx")
@@ -173,50 +252,57 @@ def run_pso_api():
         df_loaded = load_dataset(dataset_path)  # uses optimized loader
 
         # Run PSO with loaded df
-        pos, val, hist, groups = run_pso(df_loaded, max_iter=100, num_particles=30, n_mem=3, scoring="min", verbose=False)
+        pos, val, hist, groups = run_pso(
+            df_loaded, max_iter=100, num_particles=30, n_mem=3, scoring="min", verbose=False
+        )
 
         # Compute per-group fit quickly using numpy
         arr_vals = df_loaded.values
         fit = [compute_group_score_from_values(arr_vals, members) for members in groups.values()]
-        best_score = float(np.max(fit)) if len(fit) > 0 else float(val)
-        best_group_index = int(np.argmax(fit)) if len(fit) > 0 else 0
 
-        # Build output DataFrame similar to your original (Group, Score)
-        # data = [(g, s) for g, s in zip(groups.keys(), fit)]
-        # df_grp = pd.DataFrame(data, columns=["Group", "Score"])
-        # df: original uploaded DataFrame with 'fullName' column
+        # Internal best index (0-based, for groups dict)
+        if len(fit) > 0:
+            best_group_pos = int(np.argmax(fit))   # 0-based internal index
+            best_score = float(np.max(fit))
+        else:
+            best_group_pos = 0
+            best_score = float(val)
 
+        # Display group number should start from 1
+        best_group_number = best_group_pos + 1
+
+        # -----------------------------
         # Build output DataFrame with names
-        data = [
-        (g, round(fit[i], 2), ", ".join(df.iloc[members]['fullName'].astype(str)))
-        for i, (g, members) in enumerate(groups.items())
-        ]
-        df_grp = pd.DataFrame(data, columns=["Group", "Score", "Members"])
+        # Group number in file: 1, 2, 3, ...
+        # Score column is commented out / removed
+        # -----------------------------
+        data = []
+        for display_idx, (g, members) in enumerate(groups.items(), start=1):
+            members_names = ", ".join(df.iloc[members]["fullName"].astype(str))
+            # If you want to keep score in memory but not in file:
+            # score_value = round(fit[display_idx - 1], 2)
+            # data.append((display_idx, score_value, members_names))
+            data.append((display_idx, members_names))
 
+        # Only Group and Members in df_grp (no Score column)
+        df_grp = pd.DataFrame(data, columns=["Group", "Members"])
 
-
-
-        # #Save in excel
-        # output_path = os.path.join(OUTPUT_FOLDER, "group_final.xlsx")
-        # df_grp.to_excel(output_path, index=False)
-
-        # Save as TXT instead of XLSX
+        # Save as TXT (tab-separated) with only Group + Members
         output_path = os.path.join(OUTPUT_FOLDER, "group_final.txt")
         df_grp.to_csv(output_path, index=False, sep="\t")
 
         return jsonify({
             "status": "success",
-            "best_group_index": int(best_group_index),
-            "best_group": groups[best_group_index],
+            # Return display group number starting from 1
+            "best_group_index": int(best_group_number),
+            "best_group": groups[best_group_pos],
             "best_score": float(best_score),
-            "download_url": "/api/admin/download/group_final.txt"
-
+            "download_url": "/api/admin/download/group_final.txt",
         })
 
     except Exception as e:
         print("Error:", e)
         return jsonify({"error": str(e)}), 500
-
 
 
 
