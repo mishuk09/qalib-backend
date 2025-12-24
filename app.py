@@ -12,7 +12,8 @@ import io
 import numpy as np
 # from pso import run_pso, load_dataset, compute_group_score
 from pso import run_pso, load_dataset, compute_group_score_from_values
-
+from werkzeug.utils import secure_filename
+import time
 
 
 # -----------------------------------------
@@ -21,18 +22,6 @@ from pso import run_pso, load_dataset, compute_group_score_from_values
 load_dotenv()
 app = Flask(__name__)
  
-# CORS(app, resources={r"/*": {"origins": "*"}})
-# The best practice for production and for supporting credentials
-# CORS(app, supports_credentials=True, resources={
-#     r"/*": {
-#         "origins": [
-#             "http://localhost:3000",
-#             "http://localhost:5173",
-#             "https://qalib.org",
-#             "https://orangered-fox-171828.hostingersite.com"
-#         ]
-#     }
-# })
 
 # ✅ Enable full CORS for all API routes
 CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
@@ -47,24 +36,20 @@ def handle_options():
 
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "your_secret_key")
 
+
+def delete_file_if_exists(file_path):
+    if file_path and os.path.exists(file_path):
+        try:
+            os.remove(file_path)
+        except Exception as e:
+            print("Failed to delete file:", e)
+
+
 # MongoDB connection
 
-
-# Initialize DB connection (Note: Always ensure MONGO_URI is set on Render!)
 # MONGO_URI = os.getenv("MONGO_URI")
 JWT_SECRET = os.getenv("JWT_SECRET")
-# client = MongoClient(MONGO_URI)
-# db = client["Cluster0"]
-
-# if MONGO_URI:
-#     client = MongoClient(MONGO_URI)
-#     db = client.get_database('Cluster0')
-# else:
-#     print("WARNING: MONGO_URI not set. Database operations will fail.")
-#     db = None
-
-
-
+ 
  
 MONGO_URI = os.environ.get('MONGO_URI')
 
@@ -82,23 +67,27 @@ if MONGO_URI:
 else:
     print("WARNING: MONGO_URI environment variable is not set. Database operations will fail.")
     db = None
-
-
-
-
-
-
+ 
 users_collection = db["users"]
 admins_collection = db["admins"]
-
-
-
-
 
 UPLOAD_FOLDER = "uploads"
 OUTPUT_FOLDER = "outputs"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
+
+UPLOAD_ROOT = "uploads"
+PROFILE_FOLDER = os.path.join(UPLOAD_ROOT, "profile")
+COVER_FOLDER = os.path.join(UPLOAD_ROOT, "cover")
+
+os.makedirs(PROFILE_FOLDER, exist_ok=True)
+os.makedirs(COVER_FOLDER, exist_ok=True)
+
+ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "webp"}
+MAX_FILE_SIZE_MB = 5
+
+def allowed_file(filename):
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 # -----------------------------------------
@@ -137,85 +126,6 @@ def token_required(f):
 # -----------------------------------------
 # PSO 
 # -----------------------------------------
-
-
-
-# @app.route("/api/admin/pso-run", methods=["POST", "OPTIONS"])
-# @cross_origin()
-# def run_pso_api():
-#     try:
-#         if "file" not in request.files:
-#             return jsonify({"error": "No file uploaded"}), 400
-
-#         file = request.files["file"]
-#         file_path = os.path.join(UPLOAD_FOLDER, "dataset.xlsx")
-#         file.save(file_path)
-
-#         # Read original excel and prepare the same reduced df_new you had before
-#         df = pd.read_excel(file_path)
-#         # Keep same slicing as original
-#         df_subset = df.iloc[:, 39:140]
-
-#         D = df_subset.iloc[:, 0:25].sum(axis=1)
-#         H = df_subset.iloc[:, 25:48].sum(axis=1)
-#         T = df_subset.iloc[:, 48:63].sum(axis=1)
-#         DT1 = df_subset.iloc[:, 77:82].sum(axis=1)
-#         DT2 = df_subset.iloc[:, 83:88].sum(axis=1)
-#         DT3 = df_subset.iloc[:, 89:94].sum(axis=1)
-
-#         df_new = pd.DataFrame({'D': D, 'H': H, 'T': T, 'DT1': DT1, 'DT2': DT2, 'DT3': DT3})
-
-#         # Save reduced dataset (like original flow)
-#         dataset_path = os.path.join(UPLOAD_FOLDER, "dataset.xlsx")
-#         df_new.to_excel(dataset_path, index=False)
-
-#         # Load dataset once via pso.load_dataset (this ensures numeric-only and float32 conversion)
-#         df_loaded = load_dataset(dataset_path)  # uses optimized loader
-
-#         # Run PSO with loaded df
-#         pos, val, hist, groups = run_pso(df_loaded, max_iter=100, num_particles=30, n_mem=3, scoring="min", verbose=False)
-
-#         # Compute per-group fit quickly using numpy
-#         arr_vals = df_loaded.values
-#         fit = [compute_group_score_from_values(arr_vals, members) for members in groups.values()]
-#         best_score = float(np.max(fit)) if len(fit) > 0 else float(val)
-#         best_group_index = int(np.argmax(fit)) if len(fit) > 0 else 0
-
-#         # Build output DataFrame similar to your original (Group, Score)
-#         # data = [(g, s) for g, s in zip(groups.keys(), fit)]
-#         # df_grp = pd.DataFrame(data, columns=["Group", "Score"])
-#         # df: original uploaded DataFrame with 'fullName' column
-
-#         # Build output DataFrame with names
-#         data = [
-#         (g, round(fit[i], 2), ", ".join(df.iloc[members]['fullName'].astype(str)))
-#         for i, (g, members) in enumerate(groups.items())
-#         ]
-#         df_grp = pd.DataFrame(data, columns=["Group", "Score", "Members"])
-
-
-
-
-#         # #Save in excel
-#         # output_path = os.path.join(OUTPUT_FOLDER, "group_final.xlsx")
-#         # df_grp.to_excel(output_path, index=False)
-
-#         # Save as TXT instead of XLSX
-#         output_path = os.path.join(OUTPUT_FOLDER, "group_final.txt")
-#         df_grp.to_csv(output_path, index=False, sep="\t")
-
-#         return jsonify({
-#             "status": "success",
-#             "best_group_index": int(best_group_index),
-#             "best_group": groups[best_group_index],
-#             "best_score": float(best_score),
-#             "download_url": "/api/admin/download/group_final.txt"
-
-#         })
-
-#     except Exception as e:
-#         print("Error:", e)
-#         return jsonify({"error": str(e)}), 500
 
 @app.route("/api/admin/pso-run", methods=["POST", "OPTIONS"])
 @cross_origin()
@@ -306,71 +216,241 @@ def run_pso_api():
 
 
 
-
-
-
-
-# @app.route("/api/admin/pso-run", methods=["POST", "OPTIONS"])
-# @cross_origin()
-# def run_pso_api():
-#     try:
-#         if "file" not in request.files:
-#             return jsonify({"error": "No file uploaded"}), 400
-
-#         file = request.files["file"]
-#         file_path = os.path.join(UPLOAD_FOLDER, "dataset.xlsx")
-#         file.save(file_path)
-
-#         df = pd.read_excel(file_path)
-#         num_rows = df.shape[0]
-#         df_subset = df.iloc[:, 39:140]
-
-#         D = df_subset.iloc[:, 0:25].sum(axis=1)
-#         H = df_subset.iloc[:, 25:48].sum(axis=1)
-#         T = df_subset.iloc[:, 48:63].sum(axis=1)
-#         DT1 = df_subset.iloc[:, 77:82].sum(axis=1)
-#         DT2 = df_subset.iloc[:, 83:88].sum(axis=1)
-#         DT3 = df_subset.iloc[:, 89:94].sum(axis=1)
-
-#         df_new = pd.DataFrame({'D': D, 'H': H, 'T': T, 'DT1': DT1, 'DT2': DT2, 'DT3': DT3})
-#         dataset_path = os.path.join(UPLOAD_FOLDER, "dataset.xlsx")
-#         df_new.to_excel(dataset_path, index=False)
-
-#         pos, val, hist, groups = run_pso(max_iter=100, num_particles=30)
-#         df_loaded = load_dataset()
-#         fit = [compute_group_score(df_loaded, members) for members in groups.values()]
-#         best_score = np.max(fit)
-#         best_group_index = np.argmax(fit)
-
-#         data = zip(groups.items(), fit)
-#         df_grp = pd.DataFrame(data, columns=["Group", "Score"])
-#         output_path = os.path.join(OUTPUT_FOLDER, "group_final.xlsx")
-#         df_grp.to_excel(output_path, index=False)
-
-#         return jsonify({
-#             "status": "success",
-#             "best_group_index": int(best_group_index),
-#             "best_group": groups[best_group_index],
-#             "best_score": float(best_score),
-#             "download_url": "/api/admin/download/group_final.xlsx"
-#         })
-
-#     except Exception as e:
-#         print("Error:", e)
-#         return jsonify({"error": str(e)}), 500
-
-
-# @app.route("/api/admin/download/<path:filename>")
-# def download_file(filename):
-#     """Serve the generated Excel file for download."""
-#     return send_from_directory(OUTPUT_FOLDER, filename, as_attachment=True)
-
-
 @app.route("/api/admin/download/<path:filename>", methods=["GET", "OPTIONS"])
 @cross_origin()
 def download_file(filename):
     return send_from_directory(OUTPUT_FOLDER, filename, as_attachment=True)
 
+
+@app.route("/api/user/upload-profile-photo", methods=["POST"])
+@token_required
+def upload_profile_photo(current_user_email):
+    if "file" not in request.files:
+        return jsonify({"error": "No file provided"}), 400
+
+    file = request.files["file"]
+
+    if file.filename == "":
+        return jsonify({"error": "Empty filename"}), 400
+
+    if not allowed_file(file.filename):
+        return jsonify({"error": "Invalid file type"}), 400
+
+    filename = secure_filename(file.filename)
+    timestamp = int(time.time())
+    ext = filename.rsplit(".", 1)[1]
+    new_filename = f"{current_user_email}_{timestamp}.{ext}"
+
+    file_path = os.path.join(PROFILE_FOLDER, new_filename)
+    file.save(file_path)
+
+    # 🔎 Update user record
+    users_doc = users_collection.find_one({"_id": "users"})
+    if not users_doc:
+        return jsonify({"error": "Users not found"}), 404
+
+    user_found = False
+    for batch in users_doc["batches"]:
+        for user in batch["users"]:
+            if user["email"] == current_user_email:
+                # 🔥 DELETE OLD PROFILE PHOTO (if exists)
+                old_profile = user.get("profilePhoto")
+                if old_profile and old_profile.get("filename"):
+                    old_path = os.path.join(PROFILE_FOLDER, old_profile["filename"])
+                    delete_file_if_exists(old_path)
+
+                # ✅ SAVE NEW PROFILE PHOTO
+                user["profilePhoto"] = {
+                    "filename": new_filename,
+                    "path": f"/api/media/profile/{new_filename}"
+                }
+
+                user_found = True
+                break
+        if user_found:
+            break
+
+    if not user_found:
+        return jsonify({"error": "User not found"}), 404
+
+    users_collection.replace_one({"_id": "users"}, users_doc)
+
+    return jsonify({
+        "message": "Profile photo uploaded successfully",
+        "profilePhotoUrl": f"/api/media/profile/{new_filename}"
+    }), 200
+
+
+
+@app.route("/api/user/upload-cover-photo", methods=["POST"])
+@token_required
+def upload_cover_photo(current_user_email):
+    if "file" not in request.files:
+        return jsonify({"error": "No file provided"}), 400
+
+    file = request.files["file"]
+
+    if file.filename == "":
+        return jsonify({"error": "Empty filename"}), 400
+
+    if not allowed_file(file.filename):
+        return jsonify({"error": "Invalid file type"}), 400
+
+    filename = secure_filename(file.filename)
+    timestamp = int(time.time())
+    ext = filename.rsplit(".", 1)[1]
+    new_filename = f"{current_user_email}_{timestamp}.{ext}"
+
+    file_path = os.path.join(COVER_FOLDER, new_filename)
+    file.save(file_path)
+
+    users_doc = users_collection.find_one({"_id": "users"})
+    if not users_doc:
+        return jsonify({"error": "Users not found"}), 404
+
+    user_found = False
+    for batch in users_doc["batches"]:
+        for user in batch["users"]:
+            if user["email"] == current_user_email:
+                # 🔥 DELETE OLD COVER PHOTO (if exists)
+                old_cover = user.get("coverPhoto")
+                if old_cover and old_cover.get("filename"):
+                    old_path = os.path.join(COVER_FOLDER, old_cover["filename"])
+                    delete_file_if_exists(old_path)
+
+                # ✅ SAVE NEW COVER PHOTO
+                user["coverPhoto"] = {
+                    "filename": new_filename,
+                    "path": f"/api/media/cover/{new_filename}"
+                }
+
+                user_found = True
+                break
+        if user_found:
+            break
+
+    if not user_found:
+        return jsonify({"error": "User not found"}), 404
+
+    users_collection.replace_one({"_id": "users"}, users_doc)
+
+    return jsonify({
+        "message": "Cover photo uploaded successfully",
+        "coverPhotoUrl": f"/api/media/cover/{new_filename}"
+    }), 200
+
+
+# user search functionality
+
+@app.route("/api/search-users", methods=["GET"])
+def search_users():
+    query = request.args.get("query", "").strip()
+
+    if not query:
+        return jsonify({"users": []}), 200
+
+    users_doc = users_collection.find_one({"_id": "users"})
+    if not users_doc or not users_doc.get("batches"):
+        return jsonify({"users": []}), 200
+
+    query_lower = query.lower()
+    matched_users = []
+
+    for batch in users_doc.get("batches", []):
+        for user in batch.get("users", []):
+            full_name = user.get("fullName", "").lower()
+
+            if query_lower in full_name:
+                user_copy = user.copy()
+
+                # remove sensitive fields
+                user_copy.pop("password", None)
+                user_copy.pop("confirmPassword", None)
+
+                user_copy["batch_name"] = batch.get("batch_name")
+                matched_users.append(user_copy)
+
+    return jsonify({
+        "query": query,
+        "count": len(matched_users),
+        "users": matched_users
+    }), 200
+
+
+
+# -----------------------------------------
+# 👤 UPDATE PROFILE ENDPOINT
+# -----------------------------------------
+@app.route("/api/update-profile", methods=["PUT"])
+@token_required
+def update_profile(current_user_email):
+    """
+    Update user profile: fullName, email, cohortinformation, demographics.
+    """
+    data = request.get_json()
+    
+    # Extract the four specific fields
+    new_full_name = data.get("fullName")
+    new_email = data.get("email")
+    new_cohort = data.get("cohortinformation")
+    new_demo = data.get("demographics")
+
+    # 1. Fetch the main users document
+    users_doc = users_collection.find_one({"_id": "users"})
+    if not users_doc:
+        return jsonify({"error": "No users document found"}), 404
+
+    user_found = False
+    
+    # 2. Iterate through batches to find the specific user
+    for batch in users_doc.get("batches", []):
+        for user in batch.get("users", []):
+            if user.get("email") == current_user_email:
+                
+                # Check if the new email is already taken by someone else
+                if new_email and new_email.lower() != current_user_email:
+                    # Logic to check for email uniqueness across all batches
+                    for b in users_doc["batches"]:
+                        if any(u["email"] == new_email.lower() for u in b["users"]):
+                            return jsonify({"error": "The new email is already registered"}), 400
+                
+                # 3. Apply updates only if data is provided
+                if new_full_name:
+                    user["fullName"] = new_full_name
+                if new_email:
+                    user["email"] = new_email.lower()
+                if new_cohort is not None:
+                    # Update dictionary (consider user.update() if you want to merge)
+                    user["cohortinformation"] = new_cohort
+                if new_demo is not None:
+                    user["demographics"] = new_demo
+                
+                user_found = True
+                break
+        if user_found:
+            break
+
+    if not user_found:
+        return jsonify({"error": "User not found"}), 404
+
+    # 4. Save the entire updated document back to MongoDB
+    users_collection.replace_one({"_id": "users"}, users_doc)
+
+    # 5. If the email changed, we need to issue a new JWT token
+    new_token = None
+    if new_email and new_email.lower() != current_user_email:
+        new_token = create_jwt(new_email.lower())
+
+    return jsonify({
+        "message": "Profile updated successfully",
+        "token": new_token if new_token else None,
+        "updatedFields": {
+            "fullName": new_full_name,
+            "email": new_email,
+            "cohortinformation": new_cohort,
+            "demographics": new_demo
+        }
+    }), 200
 
 
 # -----------------------------------------
@@ -443,42 +523,7 @@ def register():
     }), 201
 
 
-# -----------------------------------------
-# 🧠 UPDATE PROFILE ENDPOINT (Stepwise updates)
-# -----------------------------------------
-@app.route("/api/update-profile", methods=["POST"])
-@token_required
-def update_profile(current_user_email):
-    """Update parts of the user (survey, dreamteam, bigfive, etc.)"""
-    data = request.json
-
-    # Identify which section to update (dynamic hybrid)
-    update_data = {}
-    allowed_sections = ["survey", "dreamteam", "bigfive", "cohortinformation", "demographics"]
-
-    for section in allowed_sections:
-        if section in data:
-            update_data[f"batches.$[batch].users.$[user].{section}"] = data[section]
-
-    if not update_data:
-        return jsonify({"error": "No valid section to update"}), 400
-
-    # ✅ Perform the update in nested structure
-    result = users_collection.update_one(
-        {"_id": "users"},
-        {"$set": update_data},
-        array_filters=[
-            {"batch.users": {"$exists": True}},
-            {"user.email": current_user_email}
-        ]
-    )
-
-    if result.modified_count == 0:
-        return jsonify({"error": "User not found"}), 404
-
-    return jsonify({"message": "Profile updated successfully"}), 200
-
-
+ 
 # -----------------------------------------
 # 🔑 SIGNIN ENDPOINT
 # -----------------------------------------
@@ -885,6 +930,16 @@ def export_users():
         download_name=download_name
     )
  
+
+@app.route("/api/media/profile/<filename>", methods=["GET"])
+def get_profile_photo(filename):
+    return send_from_directory(PROFILE_FOLDER, filename)
+
+@app.route("/api/media/cover/<filename>", methods=["GET"])
+def get_cover_photo(filename):
+    return send_from_directory(COVER_FOLDER, filename)
+
+
 
 # -----------------------------------------
 # 🚀 RUN SERVER
