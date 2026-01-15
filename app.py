@@ -1,6 +1,5 @@
 from flask import Flask, request, jsonify,send_file,send_from_directory
 from flask_cors import CORS, cross_origin
-from pymongo import MongoClient
 import datetime, json
 from functools import wraps
 import jwt
@@ -10,10 +9,13 @@ import pandas as pd
 from flask import send_file
 import io
 import numpy as np
-# from pso import run_pso, load_dataset, compute_group_score
+# from pso import run_pso, load_dataset, comput e_group_score
 from pso import run_pso, load_dataset, compute_group_score_from_values
 from werkzeug.utils import secure_filename
 import time
+from routes.post import post_bp
+from config.db import db
+from utils.jwt_auth import token_required
 
 
 # -----------------------------------------
@@ -22,6 +24,8 @@ import time
 load_dotenv()
 app = Flask(__name__)
  
+
+app.register_blueprint(post_bp, url_prefix="/api")
 
 # ✅ Enable full CORS for all API routes
 CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
@@ -46,28 +50,8 @@ def delete_file_if_exists(file_path):
 
 
 # MongoDB connection
-
-# MONGO_URI = os.getenv("MONGO_URI")
 JWT_SECRET = os.getenv("JWT_SECRET")
- 
- 
-MONGO_URI = os.environ.get('MONGO_URI')
 
-# Initialize DB connection (DB name explicitly set to 'Cluster0')
-if MONGO_URI:
-    try:
-        # Attempt connection using the URI from environment variables
-        client = MongoClient(MONGO_URI)
-        # Setting the database name as 'Cluster0'
-        db = client.get_database('Cluster0')
-        print("MongoDB connection established to database 'Cluster0'.")
-    except Exception as e:
-        print(f"ERROR: Failed to connect to MongoDB: {e}")
-        db = None
-else:
-    print("WARNING: MONGO_URI environment variable is not set. Database operations will fail.")
-    db = None
- 
 users_collection = db["users"]
 admins_collection = db["admins"]
 
@@ -102,26 +86,7 @@ def create_jwt(email):
     )
     return token
 
-
-def token_required(f):
-    """Middleware to protect routes using JWT token"""
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        token = None
-        if "Authorization" in request.headers:
-            token = request.headers["Authorization"].split(" ")[1]
-        if not token:
-            return jsonify({"error": "Token missing"}), 401
-
-        try:
-            data = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
-            current_user_email = data["email"]
-        except Exception as e:
-            return jsonify({"error": "Token invalid or expired"}), 401
-
-        return f(current_user_email, *args, **kwargs)
-    return decorated
-
+ 
 
 # -----------------------------------------
 # PSO 
