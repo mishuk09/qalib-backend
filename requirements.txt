@@ -6,4 +6,4 @@ python-dotenv
 pandas
 numpy
 openpyxl
-gunicorn  # The necessary WSGI server for production
+gunicorn  

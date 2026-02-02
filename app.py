@@ -186,122 +186,97 @@ def run_pso_api():
 def download_file(filename):
     return send_from_directory(OUTPUT_FOLDER, filename, as_attachment=True)
 
+# Updated Backend Endpoints for Profile and Cover Photo Upload
+# Replace your old endpoints with these updated versions
+
 
 @app.route("/api/user/upload-profile-photo", methods=["POST"])
+@cross_origin()
 @token_required
 def upload_profile_photo(current_user_email):
-    if "file" not in request.files:
-        return jsonify({"error": "No file provided"}), 400
+    
+    data = request.get_json()
+    
+    if not data or "profilePhotoUrl" not in data:
+        return jsonify({"error": "No photo URL provided"}), 400
+    
+    profile_photo_url = data["profilePhotoUrl"]
+    
+    # Normalize email for matching
+    current_user_email = (current_user_email or "").lower()
+    print(f"🔍 Uploading profile photo for: {current_user_email}")
 
-    file = request.files["file"]
-
-    if file.filename == "":
-        return jsonify({"error": "Empty filename"}), 400
-
-    if not allowed_file(file.filename):
-        return jsonify({"error": "Invalid file type"}), 400
-
-    filename = secure_filename(file.filename)
-    timestamp = int(time.time())
-    ext = filename.rsplit(".", 1)[1]
-    new_filename = f"{current_user_email}_{timestamp}.{ext}"
-
-    file_path = os.path.join(PROFILE_FOLDER, new_filename)
-    file.save(file_path)
-
-    # 🔎 Update user record
-    users_doc = users_collection.find_one({"_id": "users"})
-    if not users_doc:
-        return jsonify({"error": "Users not found"}), 404
-
-    user_found = False
-    for batch in users_doc["batches"]:
-        for user in batch["users"]:
-            if user["email"] == current_user_email:
-                # 🔥 DELETE OLD PROFILE PHOTO (if exists)
-                old_profile = user.get("profilePhoto")
-                if old_profile and old_profile.get("filename"):
-                    old_path = os.path.join(PROFILE_FOLDER, old_profile["filename"])
-                    delete_file_if_exists(old_path)
-
-                # ✅ SAVE NEW PROFILE PHOTO
-                user["profilePhoto"] = {
-                    "filename": new_filename,
-                    "path": f"/api/media/profile/{new_filename}"
-                }
-
-                user_found = True
-                break
-        if user_found:
-            break
-
-    if not user_found:
+    # ✅ Use MongoDB array filters (same as add-survey)
+    result = users_collection.update_one(
+        {"_id": "users"},
+        {"$set": {
+            "batches.$[batch].users.$[user].profilePhoto": {
+                "url": profile_photo_url,
+                "path": profile_photo_url
+            }
+        }},
+        array_filters=[
+            {"batch.users": {"$exists": True}},
+            {"user.email": current_user_email}
+        ]
+    )
+    
+    print(f"💾 Database update - Modified: {result.modified_count}")
+    
+    if result.modified_count == 0:
+        print(f"❌ User not found for: {current_user_email}")
         return jsonify({"error": "User not found"}), 404
-
-    users_collection.replace_one({"_id": "users"}, users_doc)
-
+    
     return jsonify({
         "message": "Profile photo uploaded successfully",
-        "profilePhotoUrl": f"/api/media/profile/{new_filename}"
+        "profilePhotoUrl": profile_photo_url,
+        "userEmail": current_user_email
     }), 200
 
 
-
 @app.route("/api/user/upload-cover-photo", methods=["POST"])
+@cross_origin()
 @token_required
 def upload_cover_photo(current_user_email):
-    if "file" not in request.files:
-        return jsonify({"error": "No file provided"}), 400
+    """
+    Upload cover photo to Cloudinary and store URL in database
+    """
+    data = request.get_json()
+    
+    if not data or "coverPhotoUrl" not in data:
+        return jsonify({"error": "No photo URL provided"}), 400
+    
+    cover_photo_url = data["coverPhotoUrl"]
+    
+    # Normalize email for matching
+    current_user_email = (current_user_email or "").lower()
+    print(f"🔍 Uploading cover photo for: {current_user_email}")
 
-    file = request.files["file"]
-
-    if file.filename == "":
-        return jsonify({"error": "Empty filename"}), 400
-
-    if not allowed_file(file.filename):
-        return jsonify({"error": "Invalid file type"}), 400
-
-    filename = secure_filename(file.filename)
-    timestamp = int(time.time())
-    ext = filename.rsplit(".", 1)[1]
-    new_filename = f"{current_user_email}_{timestamp}.{ext}"
-
-    file_path = os.path.join(COVER_FOLDER, new_filename)
-    file.save(file_path)
-
-    users_doc = users_collection.find_one({"_id": "users"})
-    if not users_doc:
-        return jsonify({"error": "Users not found"}), 404
-
-    user_found = False
-    for batch in users_doc["batches"]:
-        for user in batch["users"]:
-            if user["email"] == current_user_email:
-                # 🔥 DELETE OLD COVER PHOTO (if exists)
-                old_cover = user.get("coverPhoto")
-                if old_cover and old_cover.get("filename"):
-                    old_path = os.path.join(COVER_FOLDER, old_cover["filename"])
-                    delete_file_if_exists(old_path)
-
-                # ✅ SAVE NEW COVER PHOTO
-                user["coverPhoto"] = {
-                    "filename": new_filename,
-                    "path": f"/api/media/cover/{new_filename}"
-                }
-
-                user_found = True
-                break
-        if user_found:
-            break
-
-    if not user_found:
+    # ✅ Use MongoDB array filters (same as add-survey)
+    result = users_collection.update_one(
+        {"_id": "users"},
+        {"$set": {
+            "batches.$[batch].users.$[user].coverPhoto": {
+                "url": cover_photo_url,
+                "path": cover_photo_url
+            }
+        }},
+        array_filters=[
+            {"batch.users": {"$exists": True}},
+            {"user.email": current_user_email}
+        ]
+    )
+    
+    print(f"💾 Database update - Modified: {result.modified_count}")
+    
+    if result.modified_count == 0:
+        print(f"❌ User not found for: {current_user_email}")
         return jsonify({"error": "User not found"}), 404
-
-    users_collection.replace_one({"_id": "users"}, users_doc)
-
+    
     return jsonify({
         "message": "Cover photo uploaded successfully",
-        "coverPhotoUrl": f"/api/media/cover/{new_filename}"
+        "coverPhotoUrl": cover_photo_url,
+        "userEmail": current_user_email
     }), 200
 
 
@@ -344,78 +319,170 @@ def search_users():
 
 
 # -----------------------------------------
-# 👤 UPDATE PROFILE ENDPOINT
+# 🧠 UPDATE survey
 # -----------------------------------------
-@app.route("/api/update-profile", methods=["PUT"])
+@app.route("/api/update-survey", methods=["POST"])
 @token_required
 def update_profile(current_user_email):
     """
-    Update user profile: fullName, email, cohortinformation, demographics.
+    Update parts of the user (survey, dreamteam, bigfive, etc.)
     """
-    data = request.get_json()
-    
-    # Extract the four specific fields
-    new_full_name = data.get("fullName")
-    new_email = data.get("email")
-    new_cohort = data.get("cohortinformation")
-    new_demo = data.get("demographics")
+    data = request.json
 
-    # 1. Fetch the main users document
-    users_doc = users_collection.find_one({"_id": "users"})
-    if not users_doc:
-        return jsonify({"error": "No users document found"}), 404
+    # Identify which section to update (dynamic hybrid)
+    update_data = {}
+    allowed_sections = ["survey", "dreamteam", "bigfive", "cohortinformation", "demographics"]
 
-    user_found = False
-    
-    # 2. Iterate through batches to find the specific user
-    for batch in users_doc.get("batches", []):
-        for user in batch.get("users", []):
-            if user.get("email") == current_user_email:
-                
-                # Check if the new email is already taken by someone else
-                if new_email and new_email.lower() != current_user_email:
-                    # Logic to check for email uniqueness across all batches
-                    for b in users_doc["batches"]:
-                        if any(u["email"] == new_email.lower() for u in b["users"]):
-                            return jsonify({"error": "The new email is already registered"}), 400
-                
-                # 3. Apply updates only if data is provided
-                if new_full_name:
-                    user["fullName"] = new_full_name
-                if new_email:
-                    user["email"] = new_email.lower()
-                if new_cohort is not None:
-                    # Update dictionary (consider user.update() if you want to merge)
-                    user["cohortinformation"] = new_cohort
-                if new_demo is not None:
-                    user["demographics"] = new_demo
-                
-                user_found = True
-                break
-        if user_found:
-            break
+    for section in allowed_sections:
+        if section in data:
+            update_data[f"batches.$[batch].users.$[user].{section}"] = data[section]
 
-    if not user_found:
+    if not update_data:
+        return jsonify({"error": "No valid section to update"}), 400
+
+    # ✅ Perform the update in nested structure
+    result = users_collection.update_one(
+        {"_id": "users"},
+        {"$set": update_data},
+        array_filters=[
+            {"batch.users": {"$exists": True}},
+            {"user.email": current_user_email}
+        ]
+    )
+
+    if result.modified_count == 0:
         return jsonify({"error": "User not found"}), 404
 
-    # 4. Save the entire updated document back to MongoDB
-    users_collection.replace_one({"_id": "users"}, users_doc)
+    return jsonify({"message": "Profile updated successfully"}), 200
 
-    # 5. If the email changed, we need to issue a new JWT token
-    new_token = None
-    if new_email and new_email.lower() != current_user_email:
-        new_token = create_jwt(new_email.lower())
 
-    return jsonify({
-        "message": "Profile updated successfully",
-        "token": new_token if new_token else None,
-        "updatedFields": {
-            "fullName": new_full_name,
-            "email": new_email,
-            "cohortinformation": new_cohort,
-            "demographics": new_demo
-        }
-    }), 200
+
+
+# -----------------------------------------
+# 👤 UPDATE PROFILE ENDPOINT
+# -----------------------------------------
+# @app.route("/api/update-profile", methods=["PUT"])
+# @token_required
+# def update_profile(current_user_email):
+#     """
+#     Update user profile: fullName, email, cohortinformation, demographics.
+#     """
+#     data = request.get_json()
+    
+#     # Extract the four specific fields
+#     new_full_name = data.get("fullName")
+#     new_email = data.get("email")
+#     new_cohort = data.get("cohortinformation")
+#     new_demo = data.get("demographics")
+
+#     # 1. Fetch the main users document
+#     users_doc = users_collection.find_one({"_id": "users"})
+#     if not users_doc:
+#         return jsonify({"error": "No users document found"}), 404
+
+#     user_found = False
+    
+#     # 2. Iterate through batches to find the specific user
+#     for batch in users_doc.get("batches", []):
+#         for user in batch.get("users", []):
+#             if user.get("email") == current_user_email:
+                
+#                 # Check if the new email is already taken by someone else
+#                 if new_email and new_email.lower() != current_user_email:
+#                     # Logic to check for email uniqueness across all batches
+#                     for b in users_doc["batches"]:
+#                         if any(u["email"] == new_email.lower() for u in b["users"]):
+#                             return jsonify({"error": "The new email is already registered"}), 400
+                
+#                 # 3. Apply updates only if data is provided
+#                 if new_full_name:
+#                     user["fullName"] = new_full_name
+#                 if new_email:
+#                     user["email"] = new_email.lower()
+#                 if new_cohort is not None:
+#                     # Merge cohortinformation (preserve existing keys if not provided)
+#                     if not isinstance(user.get("cohortinformation"), dict):
+#                         user["cohortinformation"] = {}
+#                     user["cohortinformation"].update(new_cohort)
+#                 if new_demo is not None:
+#                     # Merge demographics (preserve existing keys if not provided)
+#                     if not isinstance(user.get("demographics"), dict):
+#                         user["demographics"] = {}
+#                     user["demographics"].update(new_demo)
+                
+#                 user_found = True
+#                 break
+#         if user_found:
+#             break
+
+#     if not user_found:
+#         return jsonify({"error": "User not found"}), 404
+
+#     # 4. Save the entire updated document back to MongoDB
+#     try:
+#         result = users_collection.replace_one({"_id": "users"}, users_doc, upsert=True)
+#         if result.matched_count == 0 and result.upserted_id is None:
+#             return jsonify({"error": "Failed to update user profile in database"}), 500
+#     except Exception as e:
+#         print("Database update error:", e)
+#         return jsonify({"error": f"Database error: {str(e)}"}), 500
+
+#     # 5. If the email changed, we need to issue a new JWT token
+#     new_token = None
+#     if new_email and new_email.lower() != current_user_email:
+#         new_token = create_jwt(new_email.lower())
+
+#     return jsonify({
+#         "message": "Profile updated successfully",
+#         "token": new_token if new_token else None,
+#         "updatedFields": {
+#             "fullName": new_full_name,
+#             "email": new_email,
+#             "cohortinformation": new_cohort,
+#             "demographics": new_demo
+#         }
+#     }), 200
+
+
+
+# -----------------------------------------
+# 🧠 ADD SURVEY
+# -----------------------------------------
+@app.route("/api/add-survey", methods=["POST"])
+@token_required
+def add_survey(current_user_email):
+    """
+    Update parts of the user (add survey, dreamteam, bigfive, etc.)
+    """
+    data = request.json
+
+    # Identify which section to update (dynamic hybrid)
+    update_data = {}
+    allowed_sections = ["survey", "dreamteam", "bigfive", "cohortinformation", "demographics"]
+
+    for section in allowed_sections:
+        if section in data:
+            update_data[f"batches.$[batch].users.$[user].{section}"] = data[section]
+
+    if not update_data:
+        return jsonify({"error": "No valid section to update"}), 400
+
+    # ✅ Perform the update in nested structure
+    result = users_collection.update_one(
+        {"_id": "users"},
+        {"$set": update_data},
+        array_filters=[
+            {"batch.users": {"$exists": True}},
+            {"user.email": current_user_email}
+        ]
+    )
+
+    if result.modified_count == 0:
+        return jsonify({"error": "User not found"}), 404
+
+    return jsonify({"message": "Profile updated successfully"}), 200
+
+
 
 
 # -----------------------------------------
