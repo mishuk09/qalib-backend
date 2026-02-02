@@ -10,7 +10,7 @@ from flask import send_file
 import io
 import numpy as np
 # from pso import run_pso, load_dataset, comput e_group_score
-from pso import run_pso, load_dataset, compute_group_score_from_values
+from pso import run_pso, load_dataset, compute_group_score_from_values, compute_group_score_word
 from werkzeug.utils import secure_filename
 import time
 from routes.post import post_bp
@@ -113,11 +113,11 @@ def run_pso_api():
         H  = survey.filter(regex=r"^survey_H\d+").sum(axis=1)     # only H-numbered (H26..H48)
         T  = survey.filter(regex=r"^survey_T").sum(axis=1)
 
-        DT1 = survey.filter(regex=r"^survey_Hip").sum(axis=1)
-        DT2 = survey.filter(regex=r"^survey_Hac").sum(axis=1)
-        DT3 = survey.filter(regex=r"^survey_Hus").sum(axis=1)
+        Hip = survey.filter(regex=r"^survey_Hip").sum(axis=1)
+        Hac = survey.filter(regex=r"^survey_Hac").sum(axis=1)
+        Hus = survey.filter(regex=r"^survey_Hus").sum(axis=1)
 
-        df_new = pd.DataFrame({"D": D, "H": H, "T": T, "DT1": DT1, "DT2": DT2, "DT3": DT3})
+        df_new = pd.DataFrame({"D": D, "H": H, "T": T, "Hip": Hip, "Hus": Hus, "Hac": Hac})
 
 
         # Save reduced dataset (like original flow)
@@ -127,14 +127,15 @@ def run_pso_api():
         # Load dataset once via pso.load_dataset (this ensures numeric-only and float32 conversion)
         df_loaded = load_dataset(dataset_path)  # uses optimized loader
 
-        # Run PSO with loaded df
+        # Run PSO with loaded df and word-model scoring enabled
         pos, val, hist, groups = run_pso(
-            df_loaded, max_iter=100, num_particles=30, n_mem=3, scoring="min", verbose=False
+            df_loaded, max_iter=100, num_particles=30, n_mem=3, 
+            scoring="min", verbose=False, use_word_model=True
         )
 
-        # Compute per-group fit quickly using numpy
-        arr_vals = df_loaded.values
-        fit = [compute_group_score_from_values(arr_vals, members) for members in groups.values()]
+        # Compute per-group fit using word-model scoring
+        from pso import compute_group_score_word
+        fit = [compute_group_score_word(df_loaded, members)[0] for members in groups.values()]
 
         # Internal best index (0-based, for groups dict)
         if len(fit) > 0:
