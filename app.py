@@ -103,21 +103,22 @@ def run_pso_api():
         file_path = os.path.join(UPLOAD_FOLDER, "dataset.xlsx")
         file.save(file_path)
 
-        # Read original excel and prepare the same reduced df_new you had before
         df = pd.read_excel(file_path)
-        # Keep same slicing as original
-        df_subset = df.iloc[:, 39:140]
 
-        D = df_subset.iloc[:, 0:25].sum(axis=1)
-        H = df_subset.iloc[:, 25:48].sum(axis=1)
-        T = df_subset.iloc[:, 48:63].sum(axis=1)
-        DT1 = df_subset.iloc[:, 77:82].sum(axis=1)
-        DT2 = df_subset.iloc[:, 83:88].sum(axis=1)
-        DT3 = df_subset.iloc[:, 89:94].sum(axis=1)
+        # --- robust: take only survey_* columns, numeric only ---
+        survey = df.filter(regex=r"^survey_").copy()
+        survey = survey.apply(pd.to_numeric, errors="coerce").fillna(0)
 
-        df_new = pd.DataFrame(
-            {"D": D, "H": H, "T": T, "DT1": DT1, "DT2": DT2, "DT3": DT3}
-        )
+        D  = survey.filter(regex=r"^survey_D").sum(axis=1)
+        H  = survey.filter(regex=r"^survey_H\d+").sum(axis=1)     # only H-numbered (H26..H48)
+        T  = survey.filter(regex=r"^survey_T").sum(axis=1)
+
+        DT1 = survey.filter(regex=r"^survey_Hip").sum(axis=1)
+        DT2 = survey.filter(regex=r"^survey_Hac").sum(axis=1)
+        DT3 = survey.filter(regex=r"^survey_Hus").sum(axis=1)
+
+        df_new = pd.DataFrame({"D": D, "H": H, "T": T, "DT1": DT1, "DT2": DT2, "DT3": DT3})
+
 
         # Save reduced dataset (like original flow)
         dataset_path = os.path.join(UPLOAD_FOLDER, "dataset.xlsx")
@@ -801,6 +802,7 @@ def get_all_admins():
     except Exception as e:
         return jsonify({"error": f"Failed to fetch admins: {str(e)}"}), 500
 
+
 # -----------------------------
 # 🗑️ ADMIN DELETE SPECIFIC USER
 # -----------------------------
@@ -819,15 +821,12 @@ def admin_delete_user():
 
     user_deleted = False
 
-    # Iterate over batches to find and delete user
+    # Iterate over batches to find and delete ALL matching users
     for batch in users_doc["batches"]:
-        for i, user in enumerate(batch["users"]):
-            if user["email"] == user_email:
-                batch["users"].pop(i)
-                user_deleted = True
-                break
-        if user_deleted:
-            break
+        original_count = len(batch["users"])
+        batch["users"] = [u for u in batch["users"] if u.get("email", "").lower() != user_email]
+        if len(batch["users"]) != original_count:
+            user_deleted = True
 
     if not user_deleted:
         return jsonify({"error": "User not found"}), 404
@@ -840,23 +839,24 @@ def admin_delete_user():
 
 
 
-@app.route("/api/admin/users-by-program", methods=["GET"])
-def admin_users_by_program():
+@app.route("/api/admin/users-by-date", methods=["GET"])
+def admin_users_by_date():
     """
-    Return a list of all programs and users grouped by programName.
+    Return a list of all dates and users grouped by created_at date.
     Response:
       {
-        "programs": ["All", "Program A", "Program B", ...],
-        "usersByProgram": {
+        "dates": ["All", "2025-11-14", "2025-11-13", ...],
+        "usersByDate": {
            "All": [...],
-           "Program A": [...],
+           "2025-11-14": [...],
+           "2025-11-13": [...],
            ...
         }
       }
     """
     users_doc = users_collection.find_one({"_id": "users"})
     if not users_doc or not users_doc.get("batches"):
-        return jsonify({"programs": ["All"], "usersByProgram": {"All": []}}), 200
+        return jsonify({"dates": ["All"], "usersByDate": {"All": []}}), 200
 
     all_users = []
     for batch in users_doc.get("batches", []):
@@ -865,53 +865,78 @@ def admin_users_by_program():
             user_copy["batch_name"] = batch.get("batch_name")
             all_users.append(user_copy)
 
-    # Group by programName (found under cohortinformation.programName)
-    users_by_program = {}
-    users_by_program["All"] = all_users
+    # Sort all users by created_at (newest first)
+    all_users.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+
+    # Group by created_at date (extract date part only: YYYY-MM-DD)
+    users_by_date = {}
+    users_by_date["All"] = all_users
 
     for user in all_users:
-        cohort = user.get("cohortinformation", {}) or {}
-        program = cohort.get("programName") or "Unknown Program"
-        if program not in users_by_program:
-            users_by_program[program] = []
-        users_by_program[program].append(user)
+        created_at = user.get("created_at")
+        if created_at:
+            # Extract date part (YYYY-MM-DD format)
+            if isinstance(created_at, str):
+                date_str = created_at.split("T")[0]  # "2025-11-14T11:39:42..." -> "2025-11-14"
+            else:
+                # If it's a datetime object
+                date_str = created_at.strftime("%Y-%m-%d")
+        else:
+            date_str = "Unknown Date"
+        
+        if date_str not in users_by_date:
+            users_by_date[date_str] = []
+        users_by_date[date_str].append(user)
 
-    # Build programs list in stable order: All first, then sorted program names
-    extra_programs = [p for p in users_by_program.keys() if p != "All"]
-    # keep ordering consistent (Unknown Program at end)
-    sorted_programs = sorted([p for p in extra_programs if p != "Unknown Program"]) 
-    if "Unknown Program" in extra_programs:
-        sorted_programs.append("Unknown Program")
-    programs_list = ["All"] + sorted_programs
+    # Build dates list in order: All first, then sorted dates (newest first)
+    extra_dates = [d for d in users_by_date.keys() if d != "All"]
+    # Sort dates in descending order (newest first), Unknown Date at end
+    sorted_dates = sorted([d for d in extra_dates if d != "Unknown Date"], reverse=True)
+    if "Unknown Date" in extra_dates:
+        sorted_dates.append("Unknown Date")
+    dates_list = ["All"] + sorted_dates
 
-    return jsonify({"programs": programs_list, "usersByProgram": users_by_program}), 200
+    return jsonify({"dates": dates_list, "usersByDate": users_by_date}), 200
 
 
-# Update existing export endpoint to accept optional programName query param:
+# Update existing export endpoint to accept optional createdDate query param:
 @app.route("/api/admin/export-users", methods=["GET"])
 def export_users():
-    # optional programName query param
-    program_filter = request.args.get("programName")  # can be None or "All" or a specific program
+    # optional createdDate query param (YYYY-MM-DD format)
+    date_filter = request.args.get("createdDate")  # can be None or "All" or a specific date
 
     users_doc = users_collection.find_one({"_id": "users"})
     if not users_doc or not users_doc.get("batches"):
         return jsonify({"error": "No users found"}), 404
 
-    # Flatten users data and optionally filter by programName
+    # Flatten users data and optionally filter by created_at date
     all_users = []
     for batch in users_doc["batches"]:
         for user in batch["users"]:
-            cohort = user.get("cohortinformation", {}) or {}
-            program_name = cohort.get("programName") or "Unknown Program"
+            created_at = user.get("created_at")
+            
+            # Extract date part for comparison
+            if created_at:
+                if isinstance(created_at, str):
+                    user_date_str = created_at.split("T")[0]
+                else:
+                    user_date_str = created_at.strftime("%Y-%m-%d")
+            else:
+                user_date_str = "Unknown Date"
 
             # Apply filter if provided and not "All"
-            if program_filter and program_filter != "All" and program_filter != program_name:
+            if date_filter and date_filter != "All" and date_filter != user_date_str:
                 continue
+
+            cohort = user.get("cohortinformation", {}) or {}
+            program_name = cohort.get("programName") or "Unknown Program"
 
             flat_user = {
                 "fullName": user.get("fullName"),
                 "email": user.get("email"),
+                "joined_date": user_date_str,
                 "programName": program_name,
+                "created_at": user.get("created_at"),
             }
 
             # Cohort information (kept)
@@ -940,6 +965,9 @@ def export_users():
 
             all_users.append(flat_user)
 
+    # Sort by created_at (newest first)
+    all_users.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+
     # Convert to DataFrame
     df = pd.DataFrame(all_users)
 
@@ -948,12 +976,10 @@ def export_users():
     df.to_excel(output, index=False, engine="openpyxl")
     output.seek(0)
 
-    # Build download_name to indicate program when filtered
+    # Build download_name to indicate date when filtered
     download_name = "all_users.xlsx"
-    if program_filter and program_filter != "All":
-        # sanitize program_filter for filename (simple replacement)
-        safe_name = program_filter.replace(" ", "_").replace("/", "_")
-        download_name = f"users_{safe_name}.xlsx"
+    if date_filter and date_filter != "All":
+        download_name = f"users_{date_filter}.xlsx"
 
     return send_file(
         output,
@@ -961,6 +987,7 @@ def export_users():
         as_attachment=True,
         download_name=download_name
     )
+ 
  
 
 @app.route("/api/media/profile/<filename>", methods=["GET"])
