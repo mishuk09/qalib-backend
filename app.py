@@ -149,24 +149,81 @@ def run_pso_api():
         best_group_number = best_group_pos + 1
 
         # -----------------------------
-        # Build output DataFrame with names
-        # Group number in file: 1, 2, 3, ...
-        # Score column is commented out / removed
+        # Build detailed report (same format as new-pso.py output)
         # -----------------------------
-        data = []
-        for display_idx, (g, members) in enumerate(groups.items(), start=1):
-            members_names = ", ".join(df.iloc[members]["fullName"].astype(str))
-            # If you want to keep score in memory but not in file:
-            # score_value = round(fit[display_idx - 1], 2)
-            # data.append((display_idx, score_value, members_names))
-            data.append((display_idx, members_names))
+        names = df.iloc[:, 0]
+        df_scoring = df_new.copy()
 
-        # Only Group and Members in df_grp (no Score column)
-        df_grp = pd.DataFrame(data, columns=["Group", "Members"])
+        group_scores = []
+        group_leaders = {}
+        for g, members in groups.items():
+            s, leaders = compute_group_score_word(df_scoring, members)
+            group_scores.append(s)
+            group_leaders[g] = leaders
 
-        # Save as TXT (tab-separated) with only Group + Members
+        best_group_score = max(group_scores) if group_scores else 0.0
+        min_group_score = min(group_scores) if group_scores else 0.0
+        avg_group_score = float(np.mean(group_scores)) if group_scores else 0.0
+        median_score = float(np.median(group_scores)) if group_scores else 0.0
+
         output_path = os.path.join(OUTPUT_FOLDER, "group_final.txt")
-        df_grp.to_csv(output_path, index=False, sep="\t")
+        components = ["D", "H", "T", "Hip", "Hus", "Hac"]
+
+        with open(output_path, "w", encoding="utf-8") as f:
+            f.write("=" * 100 + "\n")
+            f.write("QALIB GROUP MATCHING RESULTS (WORD-DOCUMENT FORMULA)\n")
+            f.write("=" * 100 + "\n")
+            f.write(f"Total Participants: {len(df_scoring)}\n")
+            f.write(f"Total Groups Formed: {len(groups)}\n")
+            f.write(f"Best Group Score (Word model): {best_group_score:.6f}\n")
+            f.write(f"Average Group Score (Word model): {avg_group_score:.6f}\n")
+            f.write(f"min Score (Word model): {min_group_score:.6f}\n")
+            f.write(f"median Group Score (Word model): {median_score:.6f}\n")
+            f.write("=" * 100 + "\n\n")
+
+            f.write("GROUP SUMMARY\n")
+            f.write("-" * 100 + "\n")
+            f.write(f"{'Group':<8} | {'Score':<12} | Members\n")
+            f.write("-" * 100 + "\n")
+
+            for g, members in groups.items():
+                score, _ = compute_group_score_word(df_scoring, members)
+                member_names = ", ".join(names.iloc[members].astype(str))
+                f.write(f"{g:<8} | {score:<12.6f} | {member_names}\n")
+
+            f.write("\n" + "=" * 100 + "\n")
+            f.write("DETAILED GROUP INFORMATION\n")
+            f.write("=" * 100 + "\n\n")
+
+            for g, members in groups.items():
+                score, leaders = compute_group_score_word(df_scoring, members)
+
+                f.write("=" * 100 + "\n")
+                f.write(f"GROUP {g}\n")
+                f.write("=" * 100 + "\n")
+                f.write(f"Group Score (Word model): {score:.6f}\n")
+                f.write(f"Number of Members: {len(members)}\n\n")
+
+                f.write("Component leaders (Qalb: D/H/T different, DreamTeam: Hip/Hus/Hac different):\n")
+                for c in components:
+                    leader_idx = leaders.get(c)
+                    if leader_idx is None:
+                        continue
+                    leader_name = names.iloc[leader_idx]
+                    leader_score = df_scoring.loc[leader_idx, c]
+                    f.write(f"  {c}: {leader_name} (score = {leader_score})\n")
+                f.write("\n")
+
+                header = "#  | Name                           | " + " | ".join([f"{c:<6}" for c in components])
+                f.write(header + "\n")
+                f.write("-" * 100 + "\n")
+
+                for idx, m in enumerate(members, start=1):
+                    row_vals = [df_scoring.loc[m, c] for c in components]
+                    row = f"{idx:<2} | {str(names.iloc[m])[:30]:<30} | " + " | ".join([f"{v:<6}" for v in row_vals])
+                    f.write(row + "\n")
+
+                f.write("\n")
 
         return jsonify({
             "status": "success",
