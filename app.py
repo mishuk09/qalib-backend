@@ -54,6 +54,7 @@ JWT_SECRET = os.getenv("JWT_SECRET")
 
 users_collection = db["users"]
 admins_collection = db["admins"]
+connections_collection = db["connections"]
 
 UPLOAD_FOLDER = "uploads"
 OUTPUT_FOLDER = "outputs"
@@ -72,6 +73,28 @@ MAX_FILE_SIZE_MB = 5
 
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def normalize_email(value):
+    return (value or "").strip().lower()
+
+
+def find_user_snapshot(email):
+    """Return sanitized user doc and batch for a given email."""
+    normalized_email = normalize_email(email)
+    users_doc = users_collection.find_one({"_id": "users"})
+    if not users_doc:
+        return None, None
+
+    for batch in users_doc.get("batches", []):
+        for user in batch.get("users", []):
+            if user.get("email", "").lower() == normalized_email:
+                user_copy = user.copy()
+                user_copy.pop("password", None)
+                user_copy.pop("confirmPassword", None)
+                return user_copy, batch.get("batch_name")
+
+    return None, None
 
 
 # -----------------------------------------
@@ -714,6 +737,98 @@ def user_survey(current_user_email):
                 }), 200
 
     return jsonify({"error": "User not found"}), 404
+
+
+# -----------------------------------------
+# 🤝 USER CONNECTIONS
+# -----------------------------------------
+@app.route("/api/user/connect", methods=["POST"])
+@token_required
+def connect_user(current_user_email):
+    """Persist a connection initiated by the authenticated user."""
+    data = request.get_json() or {}
+    target_email = normalize_email(data.get("targetEmail"))
+    note = data.get("note")
+
+    current_user_email = normalize_email(current_user_email)
+
+    if not target_email:
+        return jsonify({"error": "targetEmail is required"}), 400
+
+    if target_email == current_user_email:
+        return jsonify({"error": "You cannot connect with yourself"}), 400
+
+    target_user, batch_name = find_user_snapshot(target_email)
+    if not target_user:
+        return jsonify({"error": "Target user not found"}), 404
+
+    existing = connections_collection.find_one(
+        {"userEmail": current_user_email, "connections.email": target_email},
+        {"_id": 1}
+    )
+    if existing:
+        return jsonify({"message": "Connection already exists"}), 200
+
+    connected_at = datetime.datetime.utcnow().isoformat() + "Z"
+    connection_payload = {
+        "email": target_email,
+        "fullName": target_user.get("fullName"),
+        "batch": batch_name,
+        "profilePhoto": target_user.get("profilePhoto"),
+        "cohortinformation": target_user.get("cohortinformation"),
+        "demographics": target_user.get("demographics"),
+        "connectedAt": connected_at,
+    }
+
+    if note:
+        connection_payload["note"] = note
+
+    connections_collection.update_one(
+        {"userEmail": current_user_email},
+        {
+            "$setOnInsert": {"userEmail": current_user_email},
+            "$push": {"connections": connection_payload}
+        },
+        upsert=True
+    )
+
+    return jsonify({"message": "Connection stored", "connection": connection_payload}), 201
+
+
+@app.route("/api/user/connections", methods=["GET"])
+@token_required
+def list_connections(current_user_email):
+    """Return all saved connections for the authenticated user."""
+    current_user_email = normalize_email(current_user_email)
+    doc = connections_collection.find_one({"userEmail": current_user_email})
+    connections = doc.get("connections", []) if doc else []
+
+    return jsonify({
+        "count": len(connections),
+        "connections": connections
+    }), 200
+
+
+@app.route("/api/user/connections", methods=["DELETE"])
+@token_required
+def delete_connection(current_user_email):
+    """Remove a specific connection for the authenticated user."""
+    data = request.get_json() or {}
+    target_email = normalize_email(data.get("targetEmail"))
+    current_user_email = normalize_email(current_user_email)
+
+    if not target_email:
+        return jsonify({"error": "targetEmail is required"}), 400
+
+    result = connections_collection.update_one(
+        {"userEmail": current_user_email},
+        {"$pull": {"connections": {"email": target_email}}}
+    )
+
+    if result.modified_count == 0:
+        return jsonify({"error": "Connection not found"}), 404
+
+    return jsonify({"message": "Connection removed", "targetEmail": target_email}), 200
 
 
 # -----------------------------------------

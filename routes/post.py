@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from datetime import datetime
 from bson import ObjectId
+from bson.errors import InvalidId
 from utils.jwt_auth import token_required
 
 # assume you already have db connection
@@ -9,12 +10,7 @@ from config.db import db
 
 
 post_bp = Blueprint("post", __name__)
-
-@post_bp.route("/test-post", methods=["GET"])
-def test_post():
-    return jsonify({"status": "post route working"})
-
-
+ 
 @post_bp.route("/posts", methods=["POST"])
 @token_required
 def create_post(current_user_email):
@@ -61,6 +57,28 @@ def toggle_like(current_user_email, post_id):
 
     db.likes.insert_one(like_query)
     return jsonify({"liked": True}), 201
+
+
+@post_bp.route("/posts/<post_id>", methods=["DELETE"])
+@token_required
+def delete_post(current_user_email, post_id):
+    try:
+        post_obj_id = ObjectId(post_id)
+    except (InvalidId, TypeError):
+        return jsonify({"error": "Invalid post id"}), 400
+
+    post = db.posts.find_one({"_id": post_obj_id})
+
+    if not post:
+        return jsonify({"error": "Post not found"}), 404
+
+    if post["author_email"] != current_user_email:
+        return jsonify({"error": "Not authorized to delete this post"}), 403
+
+    db.posts.delete_one({"_id": post_obj_id})
+    db.likes.delete_many({"post_id": post_obj_id})
+
+    return jsonify({"message": "Post deleted"}), 200
 
 
 @post_bp.route("/feed", methods=["GET"])
