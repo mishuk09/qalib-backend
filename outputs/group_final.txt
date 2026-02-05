@@ -3,31 +3,31 @@ QALIB GROUP MATCHING RESULTS (WORD-DOCUMENT FORMULA)
 ====================================================================================================
 Total Participants: 45
 Total Groups Formed: 15
-Best Group Score (Word model): 1.185880
-Average Group Score (Word model): 1.070579
-min Score (Word model): 1.025017
-median Group Score (Word model): 1.051311
+Best Group Score (Word model): 1.114534
+Average Group Score (Word model): 1.067143
+min Score (Word model): 1.025300
+median Group Score (Word model): 1.072588
 ====================================================================================================
 
 GROUP SUMMARY
 ----------------------------------------------------------------------------------------------------
 Group    | Score        | Members
 ----------------------------------------------------------------------------------------------------
-0        | 1.114451     | Mahdi Hasan Mishuk, MUHAMMAD SYAWAL BIN SYAF'II , Uzair
-1        | 1.089482     | MUHAMMAD SYAWAL BIN SYAF'II , Nurin Syamimi Binti Mohamad Sa'adin, NURUL HAZIRAH ATIKAH BINTI FAZILAH
-2        | 1.107965     | MUHAMMAD AFIQ ARSYAD BIN ZULKEFLI, MUHD SYAWAL MUKHRIZ BIN JAIMEH, SITI MAISARAH BINTI ZAINAL BADRI 
-3        | 1.051311     | SITI NUR MAISARAH BINTI ROHADON, MUHAMAD ADAM BIN ROSLAN, NORATIKAH SHAKINAH BINTI JAINUDDIN
-4        | 1.106839     | MUHAMMAD AMMAR BIN HASMADI , SITI NUR MASTURAH BINTI ROHADON, Nurin Syamimi Binti Mohamad Sa'adin
-5        | 1.037620     | NURUL FAZWANI BINTI MOHAMAD JASNI , SITI NUR MASTURAH BINTI ROHADON, Afif Mahmudi
-6        | 1.069068     | MARLISA ZUELAIKHA BINTI ZALMAL , NORAISYAH AMALIA BINTI MOHD FAROZI , WAN MUHAMMAD AMZAR BIN WAN ZULKIFLI 
-7        | 1.043700     | AKRIMI BINTI MOHD FISOL, MUHD SYAWAL MUKHRIZ BIN JAIMEH, AISYAH NURDAMIA BINTI ABDUL MALEK 
-8        | 1.025017     | Abir, MUHAMMAD AMMAR BIN HASMADI , MUHAMMAD IMAN ARIEF BIN MOHD IZHAM 
-9        | 1.038534     | MUHAMMAD AFIQ ARSYAD BIN ZULKEFLI, SITI NUR MAISARAH BINTI ROHADON, NORATIKAH SHAKINAH BINTI JAINUDDIN
-10       | 1.035445     | MUHAMMAD DANISH IRFAN BIN ZAHURI, AISYAH NURDAMIA BINTI ABDUL MALEK , MARSYA HUDA BINTI MIOR MOHD HADAFI 
-11       | 1.035776     | MARLISA ZUELAIKHA BINTI ZALMAL , NURUL FAZWANI BINTI MOHAMAD JASNI , MUHAMAD ADAM BIN ROSLAN
-12       | 1.027200     | NORAISYAH AMALIA BINTI MOHD FAROZI , NUR AMIRAH NAZLAH BINTI MOHD KHAIRE , Nur Fatmaliza Binti Mohd Khairuddin
-13       | 1.090393     | MUHAMMAD DANISH IRFAN BIN ZAHURI, MUHAMMAD DZAMIEN BIN DZULKURNA’IN, NAZZIRAH BINTI ALI RAHMAN
-14       | 1.185880     | NUR WAFA THAQIFAH BINTI MOHAMAD SUHAIMI , Mohamad Arif  , SITI JESNITA HO
+0        | 1.044762     | Abir, MUHAMMAD DANISH IRFAN BIN ZAHURI, Nur Fatmaliza Binti Mohd Khairuddin
+1        | 1.106046     | Mahdi Hasan Mishuk, MUHAMMAD SYAWAL BIN SYAF'II , Afif Mahmudi
+2        | 1.105590     | MUHAMMAD DANISH IRFAN BIN ZAHURI, MUHAMMAD AMMAR BIN HASMADI , AISYAH NURDAMIA BINTI ABDUL MALEK 
+3        | 1.072588     | MUHAMMAD SYAWAL BIN SYAF'II , NURUL FAZWANI BINTI MOHAMAD JASNI , MUHD SYAWAL MUKHRIZ BIN JAIMEH
+4        | 1.030610     | MUHAMMAD AFIQ ARSYAD BIN ZULKEFLI, SITI NUR MASTURAH BINTI ROHADON, NORATIKAH SHAKINAH BINTI JAINUDDIN
+5        | 1.027129     | MUHAMAD ADAM BIN ROSLAN, MUHAMAD ADAM BIN ROSLAN, MUHAMMAD IMAN ARIEF BIN MOHD IZHAM 
+6        | 1.114534     | MARLISA ZUELAIKHA BINTI ZALMAL , SITI NUR MAISARAH BINTI ROHADON, SITI NUR MASTURAH BINTI ROHADON
+7        | 1.081746     | MUHAMMAD AMMAR BIN HASMADI , SITI NUR MAISARAH BINTI ROHADON, MUHAMMAD DZAMIEN BIN DZULKURNA’IN
+8        | 1.090306     | MUHAMMAD AFIQ ARSYAD BIN ZULKEFLI, NORAISYAH AMALIA BINTI MOHD FAROZI , Nurin Syamimi Binti Mohamad Sa'adin
+9        | 1.077945     | NORAISYAH AMALIA BINTI MOHD FAROZI , NURUL FAZWANI BINTI MOHAMAD JASNI , MUHD SYAWAL MUKHRIZ BIN JAIMEH
+10       | 1.025300     | AKRIMI BINTI MOHD FISOL, MARLISA ZUELAIKHA BINTI ZALMAL , AISYAH NURDAMIA BINTI ABDUL MALEK 
+11       | 1.094451     | NUR WAFA THAQIFAH BINTI MOHAMAD SUHAIMI , NURUL HAZIRAH ATIKAH BINTI FAZILAH, SITI JESNITA HO
+12       | 1.054251     | NORATIKAH SHAKINAH BINTI JAINUDDIN, Uzair, SITI MAISARAH BINTI ZAINAL BADRI 
+13       | 1.055511     | Nurin Syamimi Binti Mohamad Sa'adin, MARSYA HUDA BINTI MIOR MOHD HADAFI , NAZZIRAH BINTI ALI RAHMAN
+14       | 1.026377     | NUR AMIRAH NAZLAH BINTI MOHD KHAIRE , Mohamad Arif  , WAN MUHAMMAD AMZAR BIN WAN ZULKIFLI 
 
 ====================================================================================================
 DETAILED GROUP INFORMATION
@@ -36,300 +36,300 @@ DETAILED GROUP INFORMATION
 ====================================================================================================
 GROUP 0
 ====================================================================================================
-Group Score (Word model): 1.114451
+Group Score (Word model): 1.044762
+Number of Members: 3
+
+Component leaders (Qalb: D/H/T different, DreamTeam: Hip/Hus/Hac different):
+  D: MUHAMMAD DANISH IRFAN BIN ZAHURI (score = 125)
+  H: Nur Fatmaliza Binti Mohd Khairuddin (score = 92)
+  T: Abir (score = 53)
+  Hip: MUHAMMAD DANISH IRFAN BIN ZAHURI (score = 30)
+  Hus: Abir (score = 30)
+  Hac: Nur Fatmaliza Binti Mohd Khairuddin (score = 20)
+
+#  | Name                           | D      | H      | T      | Hip    | Hus    | Hac   
+----------------------------------------------------------------------------------------------------
+1  | Abir                           | 91     | 88     | 53     | 21     | 30     | 21    
+2  | MUHAMMAD DANISH IRFAN BIN ZAHU | 125    | 115    | 75     | 30     | 35     | 30    
+3  | Nur Fatmaliza Binti Mohd Khair | 98     | 92     | 60     | 23     | 27     | 20    
+
+====================================================================================================
+GROUP 1
+====================================================================================================
+Group Score (Word model): 1.106046
 Number of Members: 3
 
 Component leaders (Qalb: D/H/T different, DreamTeam: Hip/Hus/Hac different):
   D: MUHAMMAD SYAWAL BIN SYAF'II  (score = 125)
-  H: Uzair (score = 114)
+  H: Afif Mahmudi (score = 113)
   T: Mahdi Hasan Mishuk (score = 57)
   Hip: MUHAMMAD SYAWAL BIN SYAF'II  (score = 30)
-  Hus: Uzair (score = 31)
+  Hus: Afif Mahmudi (score = 30)
   Hac: Mahdi Hasan Mishuk (score = 22)
 
 #  | Name                           | D      | H      | T      | Hip    | Hus    | Hac   
 ----------------------------------------------------------------------------------------------------
 1  | Mahdi Hasan Mishuk             | 99     | 82     | 57     | 21     | 24     | 22    
 2  | MUHAMMAD SYAWAL BIN SYAF'II    | 125    | 114    | 73     | 30     | 33     | 25    
-3  | Uzair                          | 119    | 114    | 73     | 25     | 31     | 21    
-
-====================================================================================================
-GROUP 1
-====================================================================================================
-Group Score (Word model): 1.089482
-Number of Members: 3
-
-Component leaders (Qalb: D/H/T different, DreamTeam: Hip/Hus/Hac different):
-  D: MUHAMMAD SYAWAL BIN SYAF'II  (score = 125)
-  H: NURUL HAZIRAH ATIKAH BINTI FAZILAH (score = 98)
-  T: Nurin Syamimi Binti Mohamad Sa'adin (score = 65)
-  Hip: MUHAMMAD SYAWAL BIN SYAF'II  (score = 30)
-  Hus: NURUL HAZIRAH ATIKAH BINTI FAZILAH (score = 26)
-  Hac: Nurin Syamimi Binti Mohamad Sa'adin (score = 24)
-
-#  | Name                           | D      | H      | T      | Hip    | Hus    | Hac   
-----------------------------------------------------------------------------------------------------
-1  | MUHAMMAD SYAWAL BIN SYAF'II    | 125    | 114    | 73     | 30     | 33     | 25    
-2  | Nurin Syamimi Binti Mohamad Sa | 108    | 94     | 65     | 22     | 24     | 24    
-3  | NURUL HAZIRAH ATIKAH BINTI FAZ | 112    | 98     | 57     | 20     | 26     | 22    
+3  | Afif Mahmudi                   | 118    | 113    | 68     | 30     | 30     | 24    
 
 ====================================================================================================
 GROUP 2
 ====================================================================================================
-Group Score (Word model): 1.107965
-Number of Members: 3
-
-Component leaders (Qalb: D/H/T different, DreamTeam: Hip/Hus/Hac different):
-  D: MUHD SYAWAL MUKHRIZ BIN JAIMEH (score = 124)
-  H: SITI MAISARAH BINTI ZAINAL BADRI  (score = 109)
-  T: MUHAMMAD AFIQ ARSYAD BIN ZULKEFLI (score = 70)
-  Hip: MUHAMMAD AFIQ ARSYAD BIN ZULKEFLI (score = 27)
-  Hus: MUHD SYAWAL MUKHRIZ BIN JAIMEH (score = 32)
-  Hac: SITI MAISARAH BINTI ZAINAL BADRI  (score = 19)
-
-#  | Name                           | D      | H      | T      | Hip    | Hus    | Hac   
-----------------------------------------------------------------------------------------------------
-1  | MUHAMMAD AFIQ ARSYAD BIN ZULKE | 105    | 102    | 70     | 27     | 27     | 23    
-2  | MUHD SYAWAL MUKHRIZ BIN JAIMEH | 124    | 108    | 68     | 22     | 32     | 30    
-3  | SITI MAISARAH BINTI ZAINAL BAD | 116    | 109    | 66     | 25     | 23     | 19    
-
-====================================================================================================
-GROUP 3
-====================================================================================================
-Group Score (Word model): 1.051311
-Number of Members: 3
-
-Component leaders (Qalb: D/H/T different, DreamTeam: Hip/Hus/Hac different):
-  D: MUHAMAD ADAM BIN ROSLAN (score = 119)
-  H: NORATIKAH SHAKINAH BINTI JAINUDDIN (score = 98)
-  T: SITI NUR MAISARAH BINTI ROHADON (score = 62)
-  Hip: MUHAMAD ADAM BIN ROSLAN (score = 29)
-  Hus: SITI NUR MAISARAH BINTI ROHADON (score = 31)
-  Hac: NORATIKAH SHAKINAH BINTI JAINUDDIN (score = 17)
-
-#  | Name                           | D      | H      | T      | Hip    | Hus    | Hac   
-----------------------------------------------------------------------------------------------------
-1  | SITI NUR MAISARAH BINTI ROHADO | 109    | 93     | 62     | 22     | 31     | 16    
-2  | MUHAMAD ADAM BIN ROSLAN        | 119    | 106    | 71     | 29     | 28     | 22    
-3  | NORATIKAH SHAKINAH BINTI JAINU | 115    | 98     | 61     | 25     | 24     | 17    
-
-====================================================================================================
-GROUP 4
-====================================================================================================
-Group Score (Word model): 1.106839
-Number of Members: 3
-
-Component leaders (Qalb: D/H/T different, DreamTeam: Hip/Hus/Hac different):
-  D: MUHAMMAD AMMAR BIN HASMADI  (score = 119)
-  H: SITI NUR MASTURAH BINTI ROHADON (score = 102)
-  T: Nurin Syamimi Binti Mohamad Sa'adin (score = 65)
-  Hip: MUHAMMAD AMMAR BIN HASMADI  (score = 30)
-  Hus: SITI NUR MASTURAH BINTI ROHADON (score = 29)
-  Hac: Nurin Syamimi Binti Mohamad Sa'adin (score = 24)
-
-#  | Name                           | D      | H      | T      | Hip    | Hus    | Hac   
-----------------------------------------------------------------------------------------------------
-1  | MUHAMMAD AMMAR BIN HASMADI     | 119    | 110    | 75     | 30     | 35     | 30    
-2  | SITI NUR MASTURAH BINTI ROHADO | 116    | 102    | 69     | 30     | 29     | 25    
-3  | Nurin Syamimi Binti Mohamad Sa | 108    | 94     | 65     | 22     | 24     | 24    
-
-====================================================================================================
-GROUP 5
-====================================================================================================
-Group Score (Word model): 1.037620
-Number of Members: 3
-
-Component leaders (Qalb: D/H/T different, DreamTeam: Hip/Hus/Hac different):
-  D: Afif Mahmudi (score = 118)
-  H: SITI NUR MASTURAH BINTI ROHADON (score = 102)
-  T: NURUL FAZWANI BINTI MOHAMAD JASNI  (score = 53)
-  Hip: SITI NUR MASTURAH BINTI ROHADON (score = 30)
-  Hus: Afif Mahmudi (score = 30)
-  Hac: NURUL FAZWANI BINTI MOHAMAD JASNI  (score = 18)
-
-#  | Name                           | D      | H      | T      | Hip    | Hus    | Hac   
-----------------------------------------------------------------------------------------------------
-1  | NURUL FAZWANI BINTI MOHAMAD JA | 84     | 71     | 53     | 21     | 23     | 18    
-2  | SITI NUR MASTURAH BINTI ROHADO | 116    | 102    | 69     | 30     | 29     | 25    
-3  | Afif Mahmudi                   | 118    | 113    | 68     | 30     | 30     | 24    
-
-====================================================================================================
-GROUP 6
-====================================================================================================
-Group Score (Word model): 1.069068
-Number of Members: 3
-
-Component leaders (Qalb: D/H/T different, DreamTeam: Hip/Hus/Hac different):
-  D: MARLISA ZUELAIKHA BINTI ZALMAL  (score = 125)
-  H: NORAISYAH AMALIA BINTI MOHD FAROZI  (score = 112)
-  T: WAN MUHAMMAD AMZAR BIN WAN ZULKIFLI  (score = 68)
-  Hip: NORAISYAH AMALIA BINTI MOHD FAROZI  (score = 30)
-  Hus: WAN MUHAMMAD AMZAR BIN WAN ZULKIFLI  (score = 19)
-  Hac: MARLISA ZUELAIKHA BINTI ZALMAL  (score = 23)
-
-#  | Name                           | D      | H      | T      | Hip    | Hus    | Hac   
-----------------------------------------------------------------------------------------------------
-1  | MARLISA ZUELAIKHA BINTI ZALMAL | 125    | 115    | 73     | 24     | 16     | 23    
-2  | NORAISYAH AMALIA BINTI MOHD FA | 117    | 112    | 73     | 30     | 30     | 27    
-3  | WAN MUHAMMAD AMZAR BIN WAN ZUL | 125    | 106    | 68     | 25     | 19     | 22    
-
-====================================================================================================
-GROUP 7
-====================================================================================================
-Group Score (Word model): 1.043700
-Number of Members: 3
-
-Component leaders (Qalb: D/H/T different, DreamTeam: Hip/Hus/Hac different):
-  D: MUHD SYAWAL MUKHRIZ BIN JAIMEH (score = 124)
-  H: AKRIMI BINTI MOHD FISOL (score = 106)
-  T: AISYAH NURDAMIA BINTI ABDUL MALEK  (score = 54)
-  Hip: AISYAH NURDAMIA BINTI ABDUL MALEK  (score = 25)
-  Hus: MUHD SYAWAL MUKHRIZ BIN JAIMEH (score = 32)
-  Hac: AKRIMI BINTI MOHD FISOL (score = 19)
-
-#  | Name                           | D      | H      | T      | Hip    | Hus    | Hac   
-----------------------------------------------------------------------------------------------------
-1  | AKRIMI BINTI MOHD FISOL        | 112    | 106    | 69     | 24     | 25     | 19    
-2  | MUHD SYAWAL MUKHRIZ BIN JAIMEH | 124    | 108    | 68     | 22     | 32     | 30    
-3  | AISYAH NURDAMIA BINTI ABDUL MA | 98     | 88     | 54     | 25     | 19     | 19    
-
-====================================================================================================
-GROUP 8
-====================================================================================================
-Group Score (Word model): 1.025017
-Number of Members: 3
-
-Component leaders (Qalb: D/H/T different, DreamTeam: Hip/Hus/Hac different):
-  D: MUHAMMAD AMMAR BIN HASMADI  (score = 119)
-  H: MUHAMMAD IMAN ARIEF BIN MOHD IZHAM  (score = 90)
-  T: Abir (score = 53)
-  Hip: MUHAMMAD AMMAR BIN HASMADI  (score = 30)
-  Hus: Abir (score = 30)
-  Hac: MUHAMMAD IMAN ARIEF BIN MOHD IZHAM  (score = 19)
-
-#  | Name                           | D      | H      | T      | Hip    | Hus    | Hac   
-----------------------------------------------------------------------------------------------------
-1  | Abir                           | 91     | 88     | 53     | 21     | 30     | 21    
-2  | MUHAMMAD AMMAR BIN HASMADI     | 119    | 110    | 75     | 30     | 35     | 30    
-3  | MUHAMMAD IMAN ARIEF BIN MOHD I | 108    | 90     | 51     | 23     | 23     | 19    
-
-====================================================================================================
-GROUP 9
-====================================================================================================
-Group Score (Word model): 1.038534
-Number of Members: 3
-
-Component leaders (Qalb: D/H/T different, DreamTeam: Hip/Hus/Hac different):
-  D: NORATIKAH SHAKINAH BINTI JAINUDDIN (score = 115)
-  H: MUHAMMAD AFIQ ARSYAD BIN ZULKEFLI (score = 102)
-  T: SITI NUR MAISARAH BINTI ROHADON (score = 62)
-  Hip: MUHAMMAD AFIQ ARSYAD BIN ZULKEFLI (score = 27)
-  Hus: SITI NUR MAISARAH BINTI ROHADON (score = 31)
-  Hac: NORATIKAH SHAKINAH BINTI JAINUDDIN (score = 17)
-
-#  | Name                           | D      | H      | T      | Hip    | Hus    | Hac   
-----------------------------------------------------------------------------------------------------
-1  | MUHAMMAD AFIQ ARSYAD BIN ZULKE | 105    | 102    | 70     | 27     | 27     | 23    
-2  | SITI NUR MAISARAH BINTI ROHADO | 109    | 93     | 62     | 22     | 31     | 16    
-3  | NORATIKAH SHAKINAH BINTI JAINU | 115    | 98     | 61     | 25     | 24     | 17    
-
-====================================================================================================
-GROUP 10
-====================================================================================================
-Group Score (Word model): 1.035445
+Group Score (Word model): 1.105590
 Number of Members: 3
 
 Component leaders (Qalb: D/H/T different, DreamTeam: Hip/Hus/Hac different):
   D: MUHAMMAD DANISH IRFAN BIN ZAHURI (score = 125)
-  H: MARSYA HUDA BINTI MIOR MOHD HADAFI  (score = 108)
+  H: MUHAMMAD AMMAR BIN HASMADI  (score = 110)
   T: AISYAH NURDAMIA BINTI ABDUL MALEK  (score = 54)
   Hip: MUHAMMAD DANISH IRFAN BIN ZAHURI (score = 30)
-  Hus: MARSYA HUDA BINTI MIOR MOHD HADAFI  (score = 25)
+  Hus: MUHAMMAD AMMAR BIN HASMADI  (score = 35)
   Hac: AISYAH NURDAMIA BINTI ABDUL MALEK  (score = 19)
 
 #  | Name                           | D      | H      | T      | Hip    | Hus    | Hac   
 ----------------------------------------------------------------------------------------------------
 1  | MUHAMMAD DANISH IRFAN BIN ZAHU | 125    | 115    | 75     | 30     | 35     | 30    
-2  | AISYAH NURDAMIA BINTI ABDUL MA | 98     | 88     | 54     | 25     | 19     | 19    
-3  | MARSYA HUDA BINTI MIOR MOHD HA | 115    | 108    | 66     | 21     | 25     | 18    
+2  | MUHAMMAD AMMAR BIN HASMADI     | 119    | 110    | 75     | 30     | 35     | 30    
+3  | AISYAH NURDAMIA BINTI ABDUL MA | 98     | 88     | 54     | 25     | 19     | 19    
 
 ====================================================================================================
-GROUP 11
+GROUP 3
 ====================================================================================================
-Group Score (Word model): 1.035776
+Group Score (Word model): 1.072588
+Number of Members: 3
+
+Component leaders (Qalb: D/H/T different, DreamTeam: Hip/Hus/Hac different):
+  D: MUHAMMAD SYAWAL BIN SYAF'II  (score = 125)
+  H: MUHD SYAWAL MUKHRIZ BIN JAIMEH (score = 108)
+  T: NURUL FAZWANI BINTI MOHAMAD JASNI  (score = 53)
+  Hip: MUHAMMAD SYAWAL BIN SYAF'II  (score = 30)
+  Hus: MUHD SYAWAL MUKHRIZ BIN JAIMEH (score = 32)
+  Hac: NURUL FAZWANI BINTI MOHAMAD JASNI  (score = 18)
+
+#  | Name                           | D      | H      | T      | Hip    | Hus    | Hac   
+----------------------------------------------------------------------------------------------------
+1  | MUHAMMAD SYAWAL BIN SYAF'II    | 125    | 114    | 73     | 30     | 33     | 25    
+2  | NURUL FAZWANI BINTI MOHAMAD JA | 84     | 71     | 53     | 21     | 23     | 18    
+3  | MUHD SYAWAL MUKHRIZ BIN JAIMEH | 124    | 108    | 68     | 22     | 32     | 30    
+
+====================================================================================================
+GROUP 4
+====================================================================================================
+Group Score (Word model): 1.030610
+Number of Members: 3
+
+Component leaders (Qalb: D/H/T different, DreamTeam: Hip/Hus/Hac different):
+  D: SITI NUR MASTURAH BINTI ROHADON (score = 116)
+  H: MUHAMMAD AFIQ ARSYAD BIN ZULKEFLI (score = 102)
+  T: NORATIKAH SHAKINAH BINTI JAINUDDIN (score = 61)
+  Hip: SITI NUR MASTURAH BINTI ROHADON (score = 30)
+  Hus: MUHAMMAD AFIQ ARSYAD BIN ZULKEFLI (score = 27)
+  Hac: NORATIKAH SHAKINAH BINTI JAINUDDIN (score = 17)
+
+#  | Name                           | D      | H      | T      | Hip    | Hus    | Hac   
+----------------------------------------------------------------------------------------------------
+1  | MUHAMMAD AFIQ ARSYAD BIN ZULKE | 105    | 102    | 70     | 27     | 27     | 23    
+2  | SITI NUR MASTURAH BINTI ROHADO | 116    | 102    | 69     | 30     | 29     | 25    
+3  | NORATIKAH SHAKINAH BINTI JAINU | 115    | 98     | 61     | 25     | 24     | 17    
+
+====================================================================================================
+GROUP 5
+====================================================================================================
+Group Score (Word model): 1.027129
+Number of Members: 3
+
+Component leaders (Qalb: D/H/T different, DreamTeam: Hip/Hus/Hac different):
+  D: MUHAMAD ADAM BIN ROSLAN (score = 119)
+  H: MUHAMAD ADAM BIN ROSLAN (score = 106)
+  T: MUHAMMAD IMAN ARIEF BIN MOHD IZHAM  (score = 51)
+  Hip: MUHAMAD ADAM BIN ROSLAN (score = 29)
+  Hus: MUHAMAD ADAM BIN ROSLAN (score = 28)
+  Hac: MUHAMMAD IMAN ARIEF BIN MOHD IZHAM  (score = 19)
+
+#  | Name                           | D      | H      | T      | Hip    | Hus    | Hac   
+----------------------------------------------------------------------------------------------------
+1  | MUHAMAD ADAM BIN ROSLAN        | 119    | 106    | 71     | 29     | 28     | 22    
+2  | MUHAMAD ADAM BIN ROSLAN        | 119    | 106    | 71     | 29     | 28     | 22    
+3  | MUHAMMAD IMAN ARIEF BIN MOHD I | 108    | 90     | 51     | 23     | 23     | 19    
+
+====================================================================================================
+GROUP 6
+====================================================================================================
+Group Score (Word model): 1.114534
 Number of Members: 3
 
 Component leaders (Qalb: D/H/T different, DreamTeam: Hip/Hus/Hac different):
   D: MARLISA ZUELAIKHA BINTI ZALMAL  (score = 125)
-  H: MUHAMAD ADAM BIN ROSLAN (score = 106)
-  T: NURUL FAZWANI BINTI MOHAMAD JASNI  (score = 53)
-  Hip: MUHAMAD ADAM BIN ROSLAN (score = 29)
-  Hus: NURUL FAZWANI BINTI MOHAMAD JASNI  (score = 23)
+  H: SITI NUR MASTURAH BINTI ROHADON (score = 102)
+  T: SITI NUR MAISARAH BINTI ROHADON (score = 62)
+  Hip: SITI NUR MASTURAH BINTI ROHADON (score = 30)
+  Hus: SITI NUR MAISARAH BINTI ROHADON (score = 31)
   Hac: MARLISA ZUELAIKHA BINTI ZALMAL  (score = 23)
 
 #  | Name                           | D      | H      | T      | Hip    | Hus    | Hac   
 ----------------------------------------------------------------------------------------------------
 1  | MARLISA ZUELAIKHA BINTI ZALMAL | 125    | 115    | 73     | 24     | 16     | 23    
-2  | NURUL FAZWANI BINTI MOHAMAD JA | 84     | 71     | 53     | 21     | 23     | 18    
-3  | MUHAMAD ADAM BIN ROSLAN        | 119    | 106    | 71     | 29     | 28     | 22    
+2  | SITI NUR MAISARAH BINTI ROHADO | 109    | 93     | 62     | 22     | 31     | 16    
+3  | SITI NUR MASTURAH BINTI ROHADO | 116    | 102    | 69     | 30     | 29     | 25    
 
 ====================================================================================================
-GROUP 12
+GROUP 7
 ====================================================================================================
-Group Score (Word model): 1.027200
+Group Score (Word model): 1.081746
 Number of Members: 3
 
 Component leaders (Qalb: D/H/T different, DreamTeam: Hip/Hus/Hac different):
-  D: NORAISYAH AMALIA BINTI MOHD FAROZI  (score = 117)
-  H: Nur Fatmaliza Binti Mohd Khairuddin (score = 92)
-  T: NUR AMIRAH NAZLAH BINTI MOHD KHAIRE  (score = 63)
-  Hip: NORAISYAH AMALIA BINTI MOHD FAROZI  (score = 30)
-  Hus: Nur Fatmaliza Binti Mohd Khairuddin (score = 27)
-  Hac: NUR AMIRAH NAZLAH BINTI MOHD KHAIRE  (score = 18)
-
-#  | Name                           | D      | H      | T      | Hip    | Hus    | Hac   
-----------------------------------------------------------------------------------------------------
-1  | NORAISYAH AMALIA BINTI MOHD FA | 117    | 112    | 73     | 30     | 30     | 27    
-2  | NUR AMIRAH NAZLAH BINTI MOHD K | 93     | 77     | 63     | 20     | 21     | 18    
-3  | Nur Fatmaliza Binti Mohd Khair | 98     | 92     | 60     | 23     | 27     | 20    
-
-====================================================================================================
-GROUP 13
-====================================================================================================
-Group Score (Word model): 1.090393
-Number of Members: 3
-
-Component leaders (Qalb: D/H/T different, DreamTeam: Hip/Hus/Hac different):
-  D: MUHAMMAD DANISH IRFAN BIN ZAHURI (score = 125)
+  D: MUHAMMAD AMMAR BIN HASMADI  (score = 119)
   H: MUHAMMAD DZAMIEN BIN DZULKURNA’IN (score = 104)
-  T: NAZZIRAH BINTI ALI RAHMAN (score = 71)
-  Hip: MUHAMMAD DANISH IRFAN BIN ZAHURI (score = 30)
-  Hus: NAZZIRAH BINTI ALI RAHMAN (score = 27)
+  T: SITI NUR MAISARAH BINTI ROHADON (score = 62)
+  Hip: MUHAMMAD AMMAR BIN HASMADI  (score = 30)
+  Hus: SITI NUR MAISARAH BINTI ROHADON (score = 31)
   Hac: MUHAMMAD DZAMIEN BIN DZULKURNA’IN (score = 19)
 
 #  | Name                           | D      | H      | T      | Hip    | Hus    | Hac   
 ----------------------------------------------------------------------------------------------------
-1  | MUHAMMAD DANISH IRFAN BIN ZAHU | 125    | 115    | 75     | 30     | 35     | 30    
-2  | MUHAMMAD DZAMIEN BIN DZULKURNA | 106    | 104    | 57     | 17     | 7      | 19    
-3  | NAZZIRAH BINTI ALI RAHMAN      | 114    | 103    | 71     | 27     | 27     | 25    
+1  | MUHAMMAD AMMAR BIN HASMADI     | 119    | 110    | 75     | 30     | 35     | 30    
+2  | SITI NUR MAISARAH BINTI ROHADO | 109    | 93     | 62     | 22     | 31     | 16    
+3  | MUHAMMAD DZAMIEN BIN DZULKURNA | 106    | 104    | 57     | 17     | 7      | 19    
 
 ====================================================================================================
-GROUP 14
+GROUP 8
 ====================================================================================================
-Group Score (Word model): 1.185880
+Group Score (Word model): 1.090306
+Number of Members: 3
+
+Component leaders (Qalb: D/H/T different, DreamTeam: Hip/Hus/Hac different):
+  D: NORAISYAH AMALIA BINTI MOHD FAROZI  (score = 117)
+  H: MUHAMMAD AFIQ ARSYAD BIN ZULKEFLI (score = 102)
+  T: Nurin Syamimi Binti Mohamad Sa'adin (score = 65)
+  Hip: NORAISYAH AMALIA BINTI MOHD FAROZI  (score = 30)
+  Hus: MUHAMMAD AFIQ ARSYAD BIN ZULKEFLI (score = 27)
+  Hac: Nurin Syamimi Binti Mohamad Sa'adin (score = 24)
+
+#  | Name                           | D      | H      | T      | Hip    | Hus    | Hac   
+----------------------------------------------------------------------------------------------------
+1  | MUHAMMAD AFIQ ARSYAD BIN ZULKE | 105    | 102    | 70     | 27     | 27     | 23    
+2  | NORAISYAH AMALIA BINTI MOHD FA | 117    | 112    | 73     | 30     | 30     | 27    
+3  | Nurin Syamimi Binti Mohamad Sa | 108    | 94     | 65     | 22     | 24     | 24    
+
+====================================================================================================
+GROUP 9
+====================================================================================================
+Group Score (Word model): 1.077945
+Number of Members: 3
+
+Component leaders (Qalb: D/H/T different, DreamTeam: Hip/Hus/Hac different):
+  D: MUHD SYAWAL MUKHRIZ BIN JAIMEH (score = 124)
+  H: NORAISYAH AMALIA BINTI MOHD FAROZI  (score = 112)
+  T: NURUL FAZWANI BINTI MOHAMAD JASNI  (score = 53)
+  Hip: NORAISYAH AMALIA BINTI MOHD FAROZI  (score = 30)
+  Hus: MUHD SYAWAL MUKHRIZ BIN JAIMEH (score = 32)
+  Hac: NURUL FAZWANI BINTI MOHAMAD JASNI  (score = 18)
+
+#  | Name                           | D      | H      | T      | Hip    | Hus    | Hac   
+----------------------------------------------------------------------------------------------------
+1  | NORAISYAH AMALIA BINTI MOHD FA | 117    | 112    | 73     | 30     | 30     | 27    
+2  | NURUL FAZWANI BINTI MOHAMAD JA | 84     | 71     | 53     | 21     | 23     | 18    
+3  | MUHD SYAWAL MUKHRIZ BIN JAIMEH | 124    | 108    | 68     | 22     | 32     | 30    
+
+====================================================================================================
+GROUP 10
+====================================================================================================
+Group Score (Word model): 1.025300
+Number of Members: 3
+
+Component leaders (Qalb: D/H/T different, DreamTeam: Hip/Hus/Hac different):
+  D: MARLISA ZUELAIKHA BINTI ZALMAL  (score = 125)
+  H: AKRIMI BINTI MOHD FISOL (score = 106)
+  T: AISYAH NURDAMIA BINTI ABDUL MALEK  (score = 54)
+  Hip: AISYAH NURDAMIA BINTI ABDUL MALEK  (score = 25)
+  Hus: AKRIMI BINTI MOHD FISOL (score = 25)
+  Hac: MARLISA ZUELAIKHA BINTI ZALMAL  (score = 23)
+
+#  | Name                           | D      | H      | T      | Hip    | Hus    | Hac   
+----------------------------------------------------------------------------------------------------
+1  | AKRIMI BINTI MOHD FISOL        | 112    | 106    | 69     | 24     | 25     | 19    
+2  | MARLISA ZUELAIKHA BINTI ZALMAL | 125    | 115    | 73     | 24     | 16     | 23    
+3  | AISYAH NURDAMIA BINTI ABDUL MA | 98     | 88     | 54     | 25     | 19     | 19    
+
+====================================================================================================
+GROUP 11
+====================================================================================================
+Group Score (Word model): 1.094451
 Number of Members: 3
 
 Component leaders (Qalb: D/H/T different, DreamTeam: Hip/Hus/Hac different):
   D: SITI JESNITA HO (score = 125)
   H: NUR WAFA THAQIFAH BINTI MOHAMAD SUHAIMI  (score = 114)
-  T: Mohamad Arif   (score = 75)
+  T: NURUL HAZIRAH ATIKAH BINTI FAZILAH (score = 57)
   Hip: SITI JESNITA HO (score = 27)
-  Hus: Mohamad Arif   (score = 35)
-  Hac: NUR WAFA THAQIFAH BINTI MOHAMAD SUHAIMI  (score = 24)
+  Hus: NUR WAFA THAQIFAH BINTI MOHAMAD SUHAIMI  (score = 31)
+  Hac: NURUL HAZIRAH ATIKAH BINTI FAZILAH (score = 22)
 
 #  | Name                           | D      | H      | T      | Hip    | Hus    | Hac   
 ----------------------------------------------------------------------------------------------------
 1  | NUR WAFA THAQIFAH BINTI MOHAMA | 110    | 114    | 74     | 26     | 31     | 24    
-2  | Mohamad Arif                   | 119    | 111    | 75     | 25     | 35     | 27    
+2  | NURUL HAZIRAH ATIKAH BINTI FAZ | 112    | 98     | 57     | 20     | 26     | 22    
 3  | SITI JESNITA HO                | 125    | 114    | 73     | 27     | 35     | 30    
+
+====================================================================================================
+GROUP 12
+====================================================================================================
+Group Score (Word model): 1.054251
+Number of Members: 3
+
+Component leaders (Qalb: D/H/T different, DreamTeam: Hip/Hus/Hac different):
+  D: Uzair (score = 119)
+  H: SITI MAISARAH BINTI ZAINAL BADRI  (score = 109)
+  T: NORATIKAH SHAKINAH BINTI JAINUDDIN (score = 61)
+  Hip: NORATIKAH SHAKINAH BINTI JAINUDDIN (score = 25)
+  Hus: Uzair (score = 31)
+  Hac: SITI MAISARAH BINTI ZAINAL BADRI  (score = 19)
+
+#  | Name                           | D      | H      | T      | Hip    | Hus    | Hac   
+----------------------------------------------------------------------------------------------------
+1  | NORATIKAH SHAKINAH BINTI JAINU | 115    | 98     | 61     | 25     | 24     | 17    
+2  | Uzair                          | 119    | 114    | 73     | 25     | 31     | 21    
+3  | SITI MAISARAH BINTI ZAINAL BAD | 116    | 109    | 66     | 25     | 23     | 19    
+
+====================================================================================================
+GROUP 13
+====================================================================================================
+Group Score (Word model): 1.055511
+Number of Members: 3
+
+Component leaders (Qalb: D/H/T different, DreamTeam: Hip/Hus/Hac different):
+  D: MARSYA HUDA BINTI MIOR MOHD HADAFI  (score = 115)
+  H: NAZZIRAH BINTI ALI RAHMAN (score = 103)
+  T: Nurin Syamimi Binti Mohamad Sa'adin (score = 65)
+  Hip: NAZZIRAH BINTI ALI RAHMAN (score = 27)
+  Hus: MARSYA HUDA BINTI MIOR MOHD HADAFI  (score = 25)
+  Hac: Nurin Syamimi Binti Mohamad Sa'adin (score = 24)
+
+#  | Name                           | D      | H      | T      | Hip    | Hus    | Hac   
+----------------------------------------------------------------------------------------------------
+1  | Nurin Syamimi Binti Mohamad Sa | 108    | 94     | 65     | 22     | 24     | 24    
+2  | MARSYA HUDA BINTI MIOR MOHD HA | 115    | 108    | 66     | 21     | 25     | 18    
+3  | NAZZIRAH BINTI ALI RAHMAN      | 114    | 103    | 71     | 27     | 27     | 25    
+
+====================================================================================================
+GROUP 14
+====================================================================================================
+Group Score (Word model): 1.026377
+Number of Members: 3
+
+Component leaders (Qalb: D/H/T different, DreamTeam: Hip/Hus/Hac different):
+  D: WAN MUHAMMAD AMZAR BIN WAN ZULKIFLI  (score = 125)
+  H: Mohamad Arif   (score = 111)
+  T: NUR AMIRAH NAZLAH BINTI MOHD KHAIRE  (score = 63)
+  Hip: Mohamad Arif   (score = 25)
+  Hus: NUR AMIRAH NAZLAH BINTI MOHD KHAIRE  (score = 21)
+  Hac: WAN MUHAMMAD AMZAR BIN WAN ZULKIFLI  (score = 22)
+
+#  | Name                           | D      | H      | T      | Hip    | Hus    | Hac   
+----------------------------------------------------------------------------------------------------
+1  | NUR AMIRAH NAZLAH BINTI MOHD K | 93     | 77     | 63     | 20     | 21     | 18    
+2  | Mohamad Arif                   | 119    | 111    | 75     | 25     | 35     | 27    
+3  | WAN MUHAMMAD AMZAR BIN WAN ZUL | 125    | 106    | 68     | 25     | 19     | 22    
 

@@ -530,11 +530,15 @@ def update_profile(current_user_email):
 # -----------------------------------------
 # 🧠 ADD SURVEY
 # -----------------------------------------
+
+
+
 @app.route("/api/add-survey", methods=["POST"])
 @token_required
 def add_survey(current_user_email):
     """
     Update parts of the user (add survey, dreamteam, bigfive, etc.)
+    When survey is submitted, issurveyDone will be set to true
     """
     data = request.json
 
@@ -545,6 +549,10 @@ def add_survey(current_user_email):
     for section in allowed_sections:
         if section in data:
             update_data[f"batches.$[batch].users.$[user].{section}"] = data[section]
+
+    # ✅ If survey is being submitted, mark issurveyDone as true
+    if "survey" in data:
+        update_data["batches.$[batch].users.$[user].issurveyDone"] = True
 
     if not update_data:
         return jsonify({"error": "No valid section to update"}), 400
@@ -565,6 +573,50 @@ def add_survey(current_user_email):
     return jsonify({"message": "Profile updated successfully"}), 200
 
 
+# 🧠 ADD BIG FIVE DATA
+@app.route("/api/add-bigfive", methods=["POST"])
+@token_required
+def add_bigfive(current_user_email):
+    """
+    Add/Update Big Five personality test data
+    Expects: {bigfive: {q1, q2, q3, q4, q5, q6, q7, q8, q9, q10}}
+    Same pattern as add-survey
+    """
+    data = request.json
+    
+    # Identify which section to update (bigfive only)
+    update_data = {}
+    
+    if "bigfive" in data:
+        update_data["batches.$[batch].users.$[user].bigfive"] = data["bigfive"]
+    
+    else:
+        return jsonify({"error": "No bigfive data provided"}), 400
+    
+    # ✅ If bigfive is being submitted, mark isBigFiveDone as true
+    if "bigfive" in data:
+        update_data["batches.$[batch].users.$[user].isBigFiveDone"] = True
+
+    if not update_data:
+        return jsonify({"error": "No valid data to update"}), 400
+
+    # ✅ Perform the update in nested structure
+    result = users_collection.update_one(
+        {"_id": "users"},
+        {"$set": update_data},
+        array_filters=[
+            {"batch.users": {"$exists": True}},
+            {"user.email": current_user_email}
+        ]
+    )
+
+    if result.modified_count == 0:
+        return jsonify({"error": "User not found"}), 404
+
+    return jsonify({
+        "message": "Big Five data saved successfully",
+        "bigfive": data["bigfive"]
+    }), 200
 
 
 # -----------------------------------------
