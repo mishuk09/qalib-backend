@@ -734,6 +734,50 @@ def signin():
     }), 200
 
 
+# -----------------------------------------
+# 🔁 RESET PASSWORD ENDPOINT
+# -----------------------------------------
+@app.route("/api/reset-password", methods=["POST"])
+def reset_password():
+    """
+    Reset password using email + newPassword + confirmPassword.
+    """
+    data = request.get_json() or {}
+
+    email = normalize_email(data.get("email"))
+    new_password = data.get("newPassword", "")
+    confirm_password = data.get("confirmPassword", "")
+
+    if not email or not new_password or not confirm_password:
+        return jsonify({"error": "Email, newPassword and confirmPassword are required"}), 400
+
+    if new_password != confirm_password:
+        return jsonify({"error": "New password and confirm password do not match"}), 400
+
+    users_doc = users_collection.find_one({"_id": "users"})
+    if not users_doc or not users_doc.get("batches"):
+        return jsonify({"error": "No users found"}), 404
+
+    user_found = False
+
+    for batch in users_doc.get("batches", []):
+        for user in batch.get("users", []):
+            if normalize_email(user.get("email")) == email:
+                user["password"] = new_password
+                user["confirmPassword"] = confirm_password
+                user_found = True
+                break
+        if user_found:
+            break
+
+    if not user_found:
+        return jsonify({"error": "User not found"}), 404
+
+    users_collection.replace_one({"_id": "users"}, users_doc, upsert=True)
+
+    return jsonify({"message": "Password reset successful"}), 200
+
+
 
 # -----------------------------------------
 # 👤 USER PROFILE ENDPOINT
