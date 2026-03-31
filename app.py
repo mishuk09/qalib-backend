@@ -16,6 +16,7 @@ import time
 from routes.post import post_bp
 from config.db import db
 from utils.jwt_auth import token_required
+import re
 
 
 # -----------------------------------------
@@ -48,6 +49,13 @@ def delete_file_if_exists(file_path):
         except Exception as e:
             print("Failed to delete file:", e)
 
+#email normalization helper (used in multiple places for consistent matching)
+def normalize_email(email):
+    if not email:
+        return None
+    email = email.strip().lower()
+    email = re.sub(r"\s+", "", email)  # remove ALL whitespace including tabs
+    return email
 
 # MongoDB connection
 JWT_SECRET = os.getenv("JWT_SECRET")
@@ -946,6 +954,22 @@ def get_all_users():
         all_users.extend(batch.get("users", []))
 
     return jsonify({"users": all_users}), 200
+
+
+
+@app.route("/api/users/by-email", methods=["GET"])
+def get_user_by_email():
+    email = normalize_email(request.args.get("email"))
+
+    if not email:
+        return jsonify({"error": "email query parameter is required"}), 400
+
+    user, batch_name = find_user_snapshot(email)
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    user["batch_name"] = batch_name
+    return jsonify({"user": user}), 200
 
 
 
