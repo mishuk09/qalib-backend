@@ -10,7 +10,17 @@ from flask import send_file
 import io
 import numpy as np
 # from pso import run_pso, load_dataset, comput e_group_score
-from pso import run_pso, load_dataset, compute_group_score_from_values, compute_group_score_word
+from pso import (
+    run_pso as run_pso_new,
+    load_dataset as load_dataset_new,
+    compute_group_score_from_values,
+    compute_group_score_word,
+)
+from psov1 import (
+    run_pso as run_pso_old,
+    load_dataset as load_dataset_old,
+    compute_group_score_from_values as compute_group_score_from_values_old,
+)
 from werkzeug.utils import secure_filename
 import time
 from routes.post import post_bp
@@ -120,7 +130,7 @@ def create_jwt(email):
  
 
 # -----------------------------------------
-# PSO 
+# PSO -v1
 # -----------------------------------------
 
 @app.route("/api/admin/pso-run", methods=["POST", "OPTIONS"])
@@ -156,10 +166,10 @@ def run_pso_api():
         df_new.to_excel(dataset_path, index=False)
 
         # Load dataset once via pso.load_dataset (this ensures numeric-only and float32 conversion)
-        df_loaded = load_dataset(dataset_path)  # uses optimized loader
+        df_loaded = load_dataset_new(dataset_path)  # uses optimized loader
 
         # Run PSO with loaded df and word-model scoring enabled
-        pos, val, hist, groups = run_pso(
+        pos, val, hist, groups = run_pso_new(
             df_loaded, max_iter=100, num_particles=30, n_mem=3, 
             scoring="min", verbose=False, use_word_model=True
         )
@@ -268,6 +278,164 @@ def run_pso_api():
     except Exception as e:
         print("Error:", e)
         return jsonify({"error": str(e)}), 500
+
+
+
+
+# -----------------------------------------
+# PSO  v2
+# -----------------------------------------
+
+@app.route("/api/admin/pso-run-v2", methods=["POST", "OPTIONS"])
+@cross_origin()
+def run_pso_api_v2():
+    try:
+        if "file" not in request.files:
+            return jsonify({"error": "No file uploaded"}), 400
+
+        file = request.files["file"]
+        file_path = os.path.join(UPLOAD_FOLDER, "dataset.xlsx")
+        file.save(file_path)
+
+        # Read original excel and prepare the same reduced df_new you had before
+        df = pd.read_excel(file_path)
+        # Keep same slicing as original and force numeric for safe summation
+        df_subset = df.iloc[:, 39:140].apply(pd.to_numeric, errors="coerce").fillna(0)
+
+        D = df_subset.iloc[:, 0:25].sum(axis=1)
+        H = df_subset.iloc[:, 25:48].sum(axis=1)
+        T = df_subset.iloc[:, 48:63].sum(axis=1)
+        DT1 = df_subset.iloc[:, 77:82].sum(axis=1)
+        DT2 = df_subset.iloc[:, 83:88].sum(axis=1)
+        DT3 = df_subset.iloc[:, 89:94].sum(axis=1)
+
+        df_new = pd.DataFrame(
+            {"D": D, "H": H, "T": T, "DT1": DT1, "DT2": DT2, "DT3": DT3}
+        )
+
+        # Save reduced dataset (like original flow)
+        dataset_path = os.path.join(UPLOAD_FOLDER, "dataset.xlsx")
+        df_new.to_excel(dataset_path, index=False)
+
+        # Load dataset once via pso.load_dataset (this ensures numeric-only and float32 conversion)
+        df_loaded = load_dataset_old(dataset_path)  # uses optimized loader
+
+        # Run PSO with loaded df
+        pos, val, hist, groups = run_pso_old(
+            df_loaded, max_iter=100, num_particles=30, n_mem=3, scoring="min", verbose=False
+        )
+
+        # Compute per-group fit quickly using numpy
+        arr_vals = df_loaded.values
+        fit = [compute_group_score_from_values_old(arr_vals, members) for members in groups.values()]
+
+        # Internal best index (0-based, for groups dict)
+        if len(fit) > 0:
+            best_group_pos = int(np.argmax(fit))   # 0-based internal index
+            best_score = float(np.max(fit))
+        else:
+            best_group_pos = 0
+            best_score = float(val)
+
+        # Display group number should start from 1
+        best_group_number = best_group_pos + 1
+
+        # -----------------------------
+        # Build detailed TXT report (same layout style as /api/admin/pso-run)
+        # -----------------------------
+        name_series = df["fullName"] if "fullName" in df.columns else df.iloc[:, 0]
+        df_scoring = df_new.copy()
+        components = ["D", "H", "T", "DT1", "DT2", "DT3"]
+
+        group_scores = []
+        group_leaders = {}
+        for g, members in groups.items():
+            s = compute_group_score_from_values_old(arr_vals, members)
+            group_scores.append(s)
+
+            leaders = {}
+            for c in components:
+                leader_idx = df_scoring.loc[members, c].idxmax() if len(members) > 0 else None
+                leaders[c] = leader_idx
+            group_leaders[g] = leaders
+
+        best_group_score = max(group_scores) if group_scores else 0.0
+        min_group_score = min(group_scores) if group_scores else 0.0
+        avg_group_score = float(np.mean(group_scores)) if group_scores else 0.0
+        median_score = float(np.median(group_scores)) if group_scores else 0.0
+
+        output_path = os.path.join(OUTPUT_FOLDER, "group_final.txt")
+        with open(output_path, "w", encoding="utf-8") as f:
+            f.write("=" * 100 + "\n")
+            f.write("QALIB GROUP MATCHING RESULTS (PSO V2)\n")
+            f.write("=" * 100 + "\n")
+            f.write(f"Total Participants: {len(df_scoring)}\n")
+            f.write(f"Total Groups Formed: {len(groups)}\n")
+            f.write(f"Best Group Score: {best_group_score:.6f}\n")
+            f.write(f"Average Group Score: {avg_group_score:.6f}\n")
+            f.write(f"min Score: {min_group_score:.6f}\n")
+            f.write(f"median Group Score: {median_score:.6f}\n")
+            f.write("=" * 100 + "\n\n")
+
+            f.write("GROUP SUMMARY\n")
+            f.write("-" * 100 + "\n")
+            f.write(f"{'Group':<8} | {'Score':<12} | Members\n")
+            f.write("-" * 100 + "\n")
+
+            for g, members in groups.items():
+                score = compute_group_score_from_values_old(arr_vals, members)
+                member_names = ", ".join(name_series.iloc[members].astype(str).tolist())
+                f.write(f"{g:<8} | {score:<12.6f} | {member_names}\n")
+
+            f.write("\n" + "=" * 100 + "\n")
+            f.write("DETAILED GROUP INFORMATION\n")
+            f.write("=" * 100 + "\n\n")
+
+            for g, members in groups.items():
+                score = compute_group_score_from_values_old(arr_vals, members)
+                leaders = group_leaders.get(g, {})
+
+                f.write("=" * 100 + "\n")
+                f.write(f"GROUP {g}\n")
+                f.write("=" * 100 + "\n")
+                f.write(f"Group Score: {score:.6f}\n")
+                f.write(f"Number of Members: {len(members)}\n\n")
+
+                f.write("Component leaders:\n")
+                for c in components:
+                    leader_idx = leaders.get(c)
+                    if leader_idx is None:
+                        continue
+                    leader_name = name_series.iloc[leader_idx]
+                    leader_score = df_scoring.loc[leader_idx, c]
+                    f.write(f"  {c}: {leader_name} (score = {leader_score})\n")
+                f.write("\n")
+
+                header = "#  | Name                           | " + " | ".join([f"{c:<6}" for c in components])
+                f.write(header + "\n")
+                f.write("-" * 100 + "\n")
+
+                for idx, m in enumerate(members, start=1):
+                    row_vals = [df_scoring.loc[m, c] for c in components]
+                    row = f"{idx:<2} | {str(name_series.iloc[m])[:30]:<30} | " + " | ".join([f"{v:<6}" for v in row_vals])
+                    f.write(row + "\n")
+
+                f.write("\n")
+
+        return jsonify({
+            "status": "success",
+            # Return display group number starting from 1
+            "best_group_index": int(best_group_number),
+            "best_group": groups[best_group_pos],
+            "best_score": float(best_score),
+            "download_url": "/api/admin/download/group_final.txt",
+        })
+
+    except Exception as e:
+        print("Error:", e)
+        return jsonify({"error": str(e)}), 500
+
+
 
 
 
