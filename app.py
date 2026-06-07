@@ -454,7 +454,6 @@ def download_file(filename):
 def upload_profile_photo(current_user_email):
     
     data = request.get_json()
-    
     if not data or "profilePhotoUrl" not in data:
         return jsonify({"error": "No photo URL provided"}), 400
     
@@ -539,7 +538,6 @@ def upload_cover_photo(current_user_email):
 
 
 # user search functionality
-
 @app.route("/api/search-users", methods=["GET"])
 def search_users():
     query = request.args.get("query", "").strip()
