@@ -5,6 +5,7 @@ from functools import wraps
 import jwt
 import os
 from dotenv import load_dotenv
+from bson import ObjectId
 import pandas as pd
 from flask import send_file
 import io
@@ -73,6 +74,7 @@ JWT_SECRET = os.getenv("JWT_SECRET")
 users_collection = db["users"]
 admins_collection = db["admins"]
 connections_collection = db["connections"]
+training_resources_collection = db["training_resources"]
 
 UPLOAD_FOLDER = "uploads"
 OUTPUT_FOLDER = "outputs"
@@ -113,6 +115,11 @@ def find_user_snapshot(email):
                 return user_copy, batch.get("batch_name")
 
     return None, None
+
+
+def is_admin_email(email):
+    normalized_email = normalize_email(email)
+    return admins_collection.find_one({"email": normalized_email}) is not None
 
 
 # -----------------------------------------
@@ -444,10 +451,182 @@ def run_pso_api_v2():
 def download_file(filename):
     return send_from_directory(OUTPUT_FOLDER, filename, as_attachment=True)
 
+
+@app.route("/api/admin/training-resources", methods=["POST", "OPTIONS"])
+@cross_origin()
+@token_required
+def add_training_resource(current_user_email):
+    current_user_email = normalize_email(current_user_email)
+
+    if not is_admin_email(current_user_email):
+        return jsonify({"error": "Admin access required"}), 403
+
+    data = request.get_json() or {}
+    title = (data.get("title") or "").strip()
+    video_url = (data.get("videoUrl") or data.get("video_url") or data.get("url") or "").strip()
+    resource_type = (data.get("type") or "").strip().lower()
+
+    # Validate required fields
+    if not title or not video_url:
+        return jsonify({"error": "title and videoUrl are required"}), 400
+    
+    # Validate type field
+    if not resource_type or resource_type not in ["video", "ppt"]:
+        return jsonify({"error": "type must be either 'video' or 'ppt'"}), 400
+
+    resource = {
+        "title": title,
+        "videoUrl": video_url,
+        "type": resource_type,
+        "createdBy": current_user_email,
+        "created_at": datetime.datetime.utcnow(),
+    }
+
+    description = (data.get("description") or "").strip()
+    if description:
+        resource["description"] = description
+
+    result = training_resources_collection.insert_one(resource)
+
+    return jsonify({
+        "message": "Training resource added successfully",
+        "resource": {
+            "id": str(result.inserted_id),
+            "title": resource["title"],
+            "videoUrl": resource["videoUrl"],
+            "type": resource["type"],
+            "description": resource.get("description"),
+            "createdBy": resource["createdBy"],
+            "created_at": resource["created_at"].isoformat() + "Z",
+        }
+    }), 201
+
+ 
+@app.route("/api/training-resources", methods=["GET"])
+def get_training_resources():
+    resources = list(training_resources_collection.find().sort("created_at", -1))
+
+    serialized_resources = []
+    for resource in resources:
+        serialized_resources.append({
+            "id": str(resource.get("_id")),
+            "title": resource.get("title"),
+            "videoUrl": resource.get("videoUrl"),
+            "type": resource.get("type", "video"),
+            "description": resource.get("description"),
+            "createdBy": resource.get("createdBy"),
+            "created_at": resource.get("created_at").isoformat() + "Z" if resource.get("created_at") else None,
+        })
+
+    return jsonify({"resources": serialized_resources, "count": len(serialized_resources)}), 200
+
+
+@app.route("/api/admin/training-resources/<resource_id>", methods=["PUT", "OPTIONS"])
+@cross_origin()
+@token_required
+def edit_training_resource(current_user_email, resource_id):
+    current_user_email = normalize_email(current_user_email)
+
+    if not is_admin_email(current_user_email):
+        return jsonify({"error": "Admin access required"}), 403
+
+    # Validate ObjectId
+    try:
+        object_id = ObjectId(resource_id)
+    except Exception:
+        return jsonify({"error": "Invalid resource ID"}), 400
+
+    data = request.get_json() or {}
+    
+    # Prepare update data
+    update_data = {}
+    
+    title = (data.get("title") or "").strip()
+    if title:
+        update_data["title"] = title
+    
+    video_url = (data.get("videoUrl") or data.get("video_url") or data.get("url") or "").strip()
+    if video_url:
+        update_data["videoUrl"] = video_url
+    
+    resource_type = (data.get("type") or "").strip().lower()
+    if resource_type:
+        # Validate type field
+        if resource_type not in ["video", "ppt"]:
+            return jsonify({"error": "type must be either 'video' or 'ppt'"}), 400
+        update_data["type"] = resource_type
+    
+    description = (data.get("description") or "").strip()
+    if "description" in data:  # Allow clearing description
+        update_data["description"] = description if description else None
+    
+    # Add updated_at timestamp
+    update_data["updated_at"] = datetime.datetime.utcnow()
+
+    if not update_data or len(update_data) == 1:  # Only has updated_at
+        return jsonify({"error": "No fields to update"}), 400
+
+    # Update the resource
+    result = training_resources_collection.update_one(
+        {"_id": object_id},
+        {"$set": update_data}
+    )
+
+    if result.matched_count == 0:
+        return jsonify({"error": "Training resource not found"}), 404
+
+    # Fetch and return updated resource
+    updated_resource = training_resources_collection.find_one({"_id": object_id})
+    
+    return jsonify({
+        "message": "Training resource updated successfully",
+        "resource": {
+            "id": str(updated_resource.get("_id")),
+            "title": updated_resource.get("title"),
+            "videoUrl": updated_resource.get("videoUrl"),
+            "type": updated_resource.get("type", "video"),
+            "description": updated_resource.get("description"),
+            "createdBy": updated_resource.get("createdBy"),
+            "created_at": updated_resource.get("created_at").isoformat() + "Z",
+            "updated_at": updated_resource.get("updated_at").isoformat() + "Z" if updated_resource.get("updated_at") else None,
+        }
+    }), 200
+
+
+@app.route("/api/admin/training-resources/<resource_id>", methods=["DELETE", "OPTIONS"])
+@cross_origin()
+@token_required
+def delete_training_resource(current_user_email, resource_id):
+    current_user_email = normalize_email(current_user_email)
+
+    if not is_admin_email(current_user_email):
+        return jsonify({"error": "Admin access required"}), 403
+
+    # Validate ObjectId
+    try:
+        object_id = ObjectId(resource_id)
+    except Exception:
+        return jsonify({"error": "Invalid resource ID"}), 400
+
+    # Delete the resource
+    result = training_resources_collection.delete_one({"_id": object_id})
+
+    if result.deleted_count == 0:
+        return jsonify({"error": "Training resource not found"}), 404
+
+    return jsonify({
+        "message": "Training resource deleted successfully",
+        "id": resource_id
+    }), 200
+
+
+
+
+
+
 # Updated Backend Endpoints for Profile and Cover Photo Upload
 # Replace your old endpoints with these updated versions
-
-
+ 
 @app.route("/api/user/upload-profile-photo", methods=["POST"])
 @cross_origin()
 @token_required
