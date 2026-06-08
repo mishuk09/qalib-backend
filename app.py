@@ -47,6 +47,7 @@ CORS(app,
              "https://qalib.cloud",
              "http://localhost:3000",
              "http://localhost:5000"
+             "https://qalib.org",
          ],
          "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
          "allow_headers": ["Content-Type", "Authorization"]
@@ -461,6 +462,9 @@ def run_pso_api_v2():
 @cross_origin()
 def download_file(filename):
     return send_from_directory(OUTPUT_FOLDER, filename, as_attachment=True)
+
+
+
 
 @app.route("/api/admin/training-resources", methods=["POST", "OPTIONS"])
 @cross_origin()
