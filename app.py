@@ -39,8 +39,19 @@ app = Flask(__name__)
 
 app.register_blueprint(post_bp, url_prefix="/api")
 
-# ✅ Enable full CORS for all API routes
-CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
+# ✅ Enable CORS for specific origins
+CORS(app, 
+     resources={r"/api/*": {
+         "origins": [
+             "https://orangered-fox-171828.hostingersite.com",
+             "https://qalib.cloud",
+             "http://localhost:3000",
+             "http://localhost:5000"
+         ],
+         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+         "allow_headers": ["Content-Type", "Authorization"]
+     }},
+     supports_credentials=True)
 
 
 # ✅ Handle preflight OPTIONS requests (important for axios + file upload)
@@ -450,7 +461,6 @@ def run_pso_api_v2():
 @cross_origin()
 def download_file(filename):
     return send_from_directory(OUTPUT_FOLDER, filename, as_attachment=True)
-
 
 @app.route("/api/admin/training-resources", methods=["POST", "OPTIONS"])
 @cross_origin()
