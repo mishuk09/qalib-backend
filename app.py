@@ -45,9 +45,10 @@ CORS(app,
          "origins": [
              "https://orangered-fox-171828.hostingersite.com",
              "https://qalib.cloud",
-             "http://localhost:3000",
-             "http://localhost:5000"
              "https://qalib.org",
+             "http://localhost:3000",
+             "http://localhost:5000",
+             "http://localhost:5173"
          ],
          "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
          "allow_headers": ["Content-Type", "Authorization"]
